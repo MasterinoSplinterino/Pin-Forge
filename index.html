@@ -823,10 +823,30 @@ function elementToPathD(el){
   return null;
 }
 
+/* Чужой SVG кладётся в документ ради getPointAtLength, а значит его
+   обработчики событий сработают при вставке. Чистим до appendChild. */
+function sanitizeSVG(root){
+  const DROP='script,foreignObject,iframe,object,embed,audio,video,link,meta,set,animate,animateMotion,animateTransform,handler';
+  root.querySelectorAll(DROP).forEach(n=>n.remove());
+  const BADURL=/^\s*(javascript:|data:text\/html)/i;
+  const walk=n=>{
+    if(n.attributes) Array.from(n.attributes).forEach(a=>{
+      const name=a.name.toLowerCase(), val=String(a.value||'');
+      if(name.indexOf('on')===0) n.removeAttribute(a.name);
+      else if((name==='href'||name==='xlink:href'||name==='src') && BADURL.test(val)) n.removeAttribute(a.name);
+      else if(name==='style' && /expression\(|javascript:/i.test(val)) n.removeAttribute(a.name);
+    });
+    Array.from(n.children||[]).forEach(walk);
+  };
+  walk(root);
+  return root;
+}
+
 function parseSVGtoRings(svgText){
   const holder=document.createElement('div');
   holder.style.cssText='position:fixed;left:-99999px;top:0;width:1200px;height:1200px;opacity:0;pointer-events:none;overflow:hidden';
   holder.innerHTML=svgText;
+  sanitizeSVG(holder);
   const svg=holder.querySelector('svg');
   if(!svg) throw new Error(t('err.noSvg'));
   document.body.appendChild(holder);
