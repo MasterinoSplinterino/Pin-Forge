@@ -86,10 +86,19 @@ number of perimeters.
 
 ## 3mf export
 
-The project carries the full print settings: layer height, Arachne, compensations,
-speeds, accelerations, cooling, scarf joint. The printer profile name is written
-as a plain string (`PRINTERS` in the code). If your Orca preset is named
-differently, the print settings still apply and the printer stays the current one.
+The project carries the process settings: layer height, Arachne, compensations,
+speeds, accelerations, ironing, scarf joint. The printer profile name is written
+as a plain string (`PRINTERS` in the code). If your preset is named differently,
+the process settings still apply and the printer stays the current one.
+
+Cooling and filament are deliberately left out. They belong to the filament
+preset, and a half-filled one would arrive carrying default temperatures, which
+is the wrong thing to hand a printer. The Print settings section lists the
+cooling values so you can enter them in your own filament profile.
+
+For a slicer to read any of this the model has to declare itself as a project of
+the Bambu and Orca family. Without that marker the file imports as bare geometry
+and the whole profile is dropped in silence.
 
 ## Adding a language
 
