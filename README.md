@@ -76,6 +76,10 @@ Everything sits in one `<script>` at the end of `index.html`, in sections:
 
 ## Processes
 
+Every value the generator would apply is listed in the Print settings section
+of the interface, with a copy button, and explained value by value in
+[PRINT-SETTINGS.md](PRINT-SETTINGS.md), which is in Russian.
+
 The minimum stroke and gap thresholds depend on the selected process (`TECH` in
 the code). For FDM the generator also suggests how to tune the stroke to a whole
 number of perimeters.
