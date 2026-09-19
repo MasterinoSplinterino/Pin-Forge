@@ -1,0 +1,10 @@
+# Local Claude Code notes: they carry the home-network addresses of the printer
+CLAUDE.md
+
+# OS and editor noise
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log
+.vscode/
+.idea/

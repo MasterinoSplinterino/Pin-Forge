@@ -1,0 +1,2304 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pin Forge — генератор пинов из SVG</title>
+<style>
+  :root{
+    color-scheme: light dark;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    --bg:#f5f5f3; --panel:#ffffff; --ink:#191917; --muted:#6c6c66;
+    --line:#e3e3de; --accent:#c8643c; --accent-ink:#ffffff;
+    --warn:#8a5a10; --warn-bg:#fdf3e0; --ok:#2f6b46;
+    --field:#fafaf8;
+  }
+  :root:not([data-theme="light"]){
+    @media (prefers-color-scheme: dark){}
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#141413; --panel:#1e1e1c; --ink:#eceae4; --muted:#9a9890;
+      --line:#33322e; --accent:#d97757; --accent-ink:#1a1a18;
+      --warn:#e3b341; --warn-bg:#32291a; --ok:#7fb894;
+      --field:#262523;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#141413; --panel:#1e1e1c; --ink:#eceae4; --muted:#9a9890;
+    --line:#33322e; --accent:#d97757; --accent-ink:#1a1a18;
+    --warn:#e3b341; --warn-bg:#32291a; --ok:#7fb894;
+    --field:#262523;
+  }
+  *,*::before,*::after{box-sizing:inherit}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:14px; line-height:1.45;
+  }
+  header{padding:14px 20px 6px;max-width:1320px;margin:0 auto;
+    display:flex;align-items:flex-start;gap:16px}
+  .htext{flex:1;min-width:0}
+  .lang{display:flex;flex:none;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .lang button{border:0;border-radius:0;background:var(--field);color:var(--muted);
+    padding:5px 11px;font-size:11px;font-weight:600;letter-spacing:.06em;line-height:1.4}
+  .lang button+button{border-left:1px solid var(--line)}
+  .lang button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+  h1{font-size:19px;margin:0 0 4px;letter-spacing:-.01em}
+  header p{margin:0;color:var(--muted);font-size:13px}
+  .wrap{display:flex;gap:16px;padding:12px 20px 40px;max-width:1320px;margin:0 auto;align-items:flex-start}
+  @media (max-width:860px){ .wrap{flex-direction:column;padding:12px 16px 32px} }
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .controls{width:348px;flex:0 0 348px}
+  @media (max-width:860px){ .controls{width:100%;flex:none;order:2} .stage{order:1;width:100%} }
+  .stage{flex:1;min-width:0;padding:0;overflow:hidden;position:sticky;top:10px;
+    display:flex;flex-direction:column}
+  #view{display:block;width:100%;height:clamp(320px,58vh,640px);touch-action:none;cursor:grab}
+  #view:active{cursor:grabbing}
+  .stagebar{display:flex;gap:6px 14px;flex-wrap:wrap;align-items:center;
+    padding:8px 12px;font-size:12px;color:var(--muted);
+    border-top:1px solid var(--line);background:var(--panel)}
+  #s-warn{flex-basis:100%;order:9;font-size:11.5px;line-height:1.35;
+    color:var(--warn);background:var(--warn-bg);padding:6px 8px;border-radius:6px}
+  #s-warn:empty{display:none}
+  @media (max-width:860px){ .stage{position:static} #view{height:44vh;min-height:280px} }
+  .drop{border:1.5px dashed var(--line);border-radius:10px;padding:16px 12px;text-align:center;
+    background:var(--field);cursor:pointer;transition:border-color .15s,background .15s}
+  .drop.hot{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--field))}
+  .drop b{display:block;font-size:13px}
+  .drop span{color:var(--muted);font-size:12px}
+  .drop.loaded{display:flex;align-items:center;gap:8px;text-align:left;padding:9px 12px;
+    border-style:solid;border-color:var(--line)}
+  .drop.loaded::before{content:"¹3";color:var(--ok);font-weight:700;flex:none;font-size:13px}
+  .drop.loaded b{flex:1;min-width:0;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .drop.loaded span{margin-left:auto;white-space:nowrap;font-size:11.5px;flex:none}
+  /* загрузка живёт под превью, внутри той же панели */
+  .loadbar{padding:12px;border-top:1px solid var(--line);background:var(--panel)}
+  .loadbar details{margin-top:10px;padding-top:8px}
+  .stage.nostick{position:static}
+  .controls .grp:first-child{margin-top:0}
+  .grp{margin-top:16px}
+  .grp h3{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);
+    margin:0 0 8px;font-weight:600}
+  .row{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+  .row label{flex:1;font-size:13px}
+  .row .val{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12px;min-width:46px;text-align:right}
+  input[type=range]{width:120px;accent-color:var(--accent)}
+  input[type=number]{width:64px;background:var(--field);color:var(--ink);border:1px solid var(--line);
+    border-radius:6px;padding:4px 6px;font:inherit;font-size:12px}
+  input[type=checkbox]{accent-color:var(--accent);width:16px;height:16px}
+  select{background:var(--field);color:var(--ink);border:1px solid var(--line);border-radius:6px;
+    padding:5px 6px;font:inherit;font-size:12px;width:100%}
+  button{font:inherit;border-radius:8px;border:1px solid var(--line);background:var(--field);
+    color:var(--ink);padding:9px 12px;cursor:pointer}
+  button:hover{border-color:var(--accent)}
+  button.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent;font-weight:600;width:100%}
+  button.primary:disabled{opacity:.45;cursor:not-allowed}
+  .msg{margin-top:10px;font-size:12px;padding:8px 10px;border-radius:8px;background:var(--warn-bg);color:var(--warn)}
+  .msg.ok{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok)}
+  .hint{color:var(--muted);font-size:11.5px;margin-top:6px}
+  .stat{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);padding:1px 0}
+  .stat b{color:var(--ink);font-weight:500;font-variant-numeric:tabular-nums}
+  details{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
+  summary{cursor:pointer;font-size:12px;color:var(--muted)}
+  details p{font-size:12px;color:var(--muted);margin:8px 0 0}
+  textarea{width:100%;height:80px;background:var(--field);color:var(--ink);border:1px solid var(--line);
+    border-radius:8px;padding:8px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;margin-top:8px}
+</style>
+</head>
+<body>
+<header>
+  <div class="htext">
+    <h1>Pin Forge</h1>
+    <p data-i18n="app.tagline"></p>
+  </div>
+  <div class="lang" role="group" aria-label="Language">
+    <button type="button" id="lang-ru" data-lang="ru" aria-pressed="false">RU</button>
+    <button type="button" id="lang-en" data-lang="en" aria-pressed="false">EN</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="panel stage">
+    <canvas id="view"></canvas>
+    <div class="stagebar">
+      <span id="s-size">&#8212;</span>
+      <span id="s-tris">&#8212;</span>
+      <span id="s-rings">&#8212;</span>
+      <span id="s-mount" style="color:var(--accent)">&#8212;</span>
+      <div id="s-warn"></div>
+      <button id="flip" style="padding:2px 8px;font-size:11px;margin-left:auto"></button>
+    </div>
+
+    <div class="loadbar">
+      <div class="drop" id="drop">
+        <b id="drop-title"></b>
+        <span id="drop-sub"></span>
+        <input type="file" id="file" accept=".svg,image/svg+xml" hidden>
+      </div>
+      <div id="msg"></div>
+
+      <details>
+        <summary data-i18n="raw.summary"></summary>
+        <textarea id="raw" placeholder="&lt;svg ...&gt;...&lt;/svg&gt;"></textarea>
+        <button id="rawgo" style="margin-top:8px" data-i18n="raw.parse"></button>
+        <p data-i18n="raw.req"></p>
+      </details>
+    </div>
+  </div>
+
+  <div class="panel controls">
+    <div class="grp">
+      <h3 data-i18n="g.tech"></h3>
+      <select id="tech">
+        <option value="fdm02" data-i18n="tech.fdm02"></option>
+        <option value="fdm04" data-i18n="tech.fdm04"></option>
+        <option value="msla" data-i18n="tech.msla"></option>
+      </select>
+    </div>
+
+    <div class="grp">
+      <h3 data-i18n="g.base"></h3>
+      <div class="row">
+        <label for="mode" data-i18n="f.shape"></label>
+        <select id="mode" style="width:150px">
+          <option value="disc" data-i18n="shape.disc"></option>
+          <option value="cut" data-i18n="shape.cut"></option>
+          <option value="rect" data-i18n="shape.rect"></option>
+        </select>
+      </div>
+      <div class="row" data-only="disc"><label for="diam" data-i18n="f.diam"></label>
+        <input type="range" id="diam" min="12" max="120" step="0.5" value="25">
+        <span class="val" id="v-diam"></span></div>
+      <div class="row" data-only="rect"><label for="marg" data-i18n="f.marg"></label>
+        <input type="range" id="marg" min="0.5" max="12" step="0.5" value="2.5">
+        <span class="val" id="v-marg"></span></div>
+      <div class="row" data-only="rect"><label for="rad" data-i18n="f.rad"></label>
+        <input type="range" id="rad" min="0" max="20" step="0.5" value="3">
+        <span class="val" id="v-rad"></span></div>
+      <div class="row" data-only="cut"><label for="ring" data-i18n="f.ring"></label>
+        <input type="range" id="ring" min="0.2" max="8" step="0.1" value="0.7">
+        <span class="val" id="v-ring"></span></div>
+      <div class="row" data-only="cut"><label for="solid" data-i18n="f.solid"></label>
+        <input type="checkbox" id="solid" checked></div>
+      <div class="row"><label for="thick" data-i18n="f.thick"></label>
+        <input type="range" id="thick" min="0.8" max="8" step="0.1" value="1.6">
+        <span class="val" id="v-thick"></span></div>
+      <div class="row" data-only="disc"><label for="cham" data-i18n="f.cham"></label>
+        <input type="range" id="cham" min="0" max="1.2" step="0.05" value="0.35">
+        <span class="val" id="v-cham"></span></div>
+      <div class="row" data-only="disc"><label for="dome" data-i18n="f.dome"></label>
+        <input type="range" id="dome" min="0" max="2" step="0.05" value="0">
+        <span class="val" id="v-dome"></span></div>
+    </div>
+
+    <div class="grp">
+      <h3 data-i18n="g.logo"></h3>
+      <div class="row"><label for="logo" data-i18n="f.size"></label>
+        <input type="range" id="logo" min="5" max="100" step="0.5" value="17">
+        <span class="val" id="v-logo"></span></div>
+      <div class="row"><label for="rel" data-i18n="f.rel"></label>
+        <input type="range" id="rel" min="0.2" max="2" step="0.05" value="0.5">
+        <span class="val" id="v-rel"></span></div>
+      <div class="row"><label for="bev" data-i18n="f.bev"></label>
+        <input type="range" id="bev" min="0" max="0.3" step="0.02" value="0.1">
+        <span class="val" id="v-bev"></span></div>
+      <div class="row"><label for="grow" data-i18n="f.grow"></label>
+        <input type="range" id="grow" min="-0.2" max="0.4" step="0.02" value="0">
+        <span class="val" id="v-grow"></span></div>
+      <div class="row"><label for="draft" data-i18n="f.draft"></label>
+        <input type="range" id="draft" min="0" max="0.25" step="0.01" value="0.08">
+        <span class="val" id="v-draft"></span></div>
+      <div class="row"><label for="inv" data-i18n="f.inv"></label>
+        <input type="checkbox" id="inv"></div>
+      <div class="hint" data-i18n-html="hint.grow"></div>
+    </div>
+
+    <div class="grp">
+      <h3 data-i18n="g.mount"></h3>
+      <div class="row"><label for="insert" data-i18n="f.insert"></label>
+        <select id="insert" style="width:160px">
+          <option value="needle" data-i18n="ins.needle"></option>
+          <option value="mag5" data-i18n="ins.mag5"></option>
+          <option value="mag6" data-i18n="ins.mag6"></option>
+          <option value="mag8" data-i18n="ins.mag8"></option>
+          <option value="custom" data-i18n="ins.custom"></option>
+        </select></div>
+      <div class="row"><label for="wall" data-i18n="f.wall"></label>
+        <input type="range" id="wall" min="0.4" max="3" step="0.1" value="1.3">
+        <span class="val" id="v-wall"></span></div>
+      <div class="row"><label for="fwall" data-i18n="f.fwall"></label>
+        <input type="range" id="fwall" min="0.3" max="2.5" step="0.1" value="0.8">
+        <span class="val" id="v-fwall"></span></div>
+      <div class="row"><label for="autoth" data-i18n="f.autoth"></label>
+        <input type="checkbox" id="autoth" checked></div>
+      <div class="row"><label for="zone" data-i18n="f.zone"></label>
+        <input type="number" id="zone" value="6" step="1" min="0" max="60" style="width:56px"> <span class="val" data-i18n="u.mm"></span></div>
+      <div class="row"><label for="ox" data-i18n="f.off"></label>
+        <input type="number" id="ox" value="0" step="0.5" style="width:52px">
+        <input type="number" id="oy" value="0" step="0.5" style="width:52px"></div>
+      <div class="row"><label for="seat" data-i18n="f.seat"></label>
+        <select id="seat" style="width:170px">
+          <option value="socket" data-i18n="seat.socket"></option>
+          <option value="flat" data-i18n="seat.flat"></option>
+        </select></div>
+      <div class="row" data-seat="flat"><label for="bh" data-i18n="f.bh"></label>
+        <input type="number" id="bh" value="0.8" step="0.1" min="0.3" max="3"> <span class="val" data-i18n="u.mm"></span></div>
+      <div class="row" data-ins="mag"><label for="lidon" data-i18n="f.lidon"></label>
+        <input type="checkbox" id="lidon">
+        <input type="number" id="lid" value="0.4" step="0.1" min="0.2" max="1.5" style="width:56px"></div>
+      <div class="row"><label for="mount" data-i18n="f.mount"></label>
+        <select id="mount" style="width:160px">
+          <option value="auto" selected data-i18n="mount.auto"></option>
+          <option value="pocket" data-i18n="mount.pocket"></option>
+          <option value="inset" data-i18n="mount.inset"></option>
+          <option value="boss" data-i18n="mount.boss"></option>
+          <option value="boss2" data-i18n="mount.boss2"></option>
+          <option value="none" data-i18n="mount.none"></option>
+        </select></div>
+
+      <div class="row" data-mount="bossmanual"><label for="bd" data-i18n="f.bd"></label>
+        <input type="number" id="bd" value="12.5" step="0.5" min="5" max="30"> <span class="val" data-i18n="u.mm"></span></div>
+      <div class="row" data-mount="boss2manual"><label for="bsp" data-i18n="f.bsp"></label>
+        <input type="number" id="bsp" value="16" step="1" min="6" max="120"> <span class="val" data-i18n="u.mm"></span></div>
+      <div class="row"><label for="pd" data-i18n="f.pd"></label>
+        <input type="number" id="pd" value="10.3" step="0.1" min="4" max="20"> <span class="val" data-i18n="u.mm"></span></div>
+      <div class="row"><label for="pdep" data-i18n="f.pdep"></label>
+        <input type="number" id="pdep" value="0.6" step="0.05" min="0.2" max="2"> <span class="val" data-i18n="u.mm"></span></div>
+      <div class="hint" data-i18n-html="hint.pocket"></div>
+    </div>
+
+    <div class="grp">
+      <h3 data-i18n="g.check"></h3>
+      <canvas id="map" width="600" height="240" style="width:100%;height:118px;display:block;background:var(--field);border:1px solid var(--line);border-radius:8px"></canvas>
+      <div class="stat" style="margin-top:8px"><span data-i18n="st.stroke"></span><b id="st-stroke">&#8212;</b></div>
+      <div class="stat"><span data-i18n="st.gap"></span><b id="st-gap">&#8212;</b></div>
+      <div class="stat"><span data-i18n="st.ratio"></span><b id="st-ratio">&#8212;</b></div>
+      <div id="advice" class="hint"></div>
+    </div>
+
+    <div class="grp">
+      <div class="stat"><span data-i18n="st.size"></span><b id="st-size">&#8212;</b></div>
+      <div class="stat"><span data-i18n="st.h"></span><b id="st-h">&#8212;</b></div>
+      <div class="stat"><span data-i18n="st.vol"></span><b id="st-vol">&#8212;</b></div>
+    </div>
+
+    <div class="grp">
+      <div class="row"><label for="plate" data-i18n="f.plate"></label>
+        <input type="checkbox" id="plate"></div>
+      <div class="row"><label for="fmt" data-i18n="f.fmt"></label>
+        <select id="fmt" style="width:170px">
+          <option value="zip" data-i18n="fmt.zip"></option>
+          <option value="3mf" data-i18n="fmt.3mf"></option>
+        </select></div>
+      <div class="row" data-fmt="3mf"><label for="printer" data-i18n="f.printer"></label>
+        <select id="printer" style="width:170px"></select></div>
+      <button class="primary" id="dl" disabled></button>
+      <div class="hint" data-i18n="hint.zip"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- локальные копии; если файлов нет рядом — подтянутся с CDN -->
+<script src="vendor/three.min.js"></script>
+<script>if(typeof THREE==='undefined')document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>');</script>
+<script src="vendor/pako.min.js"></script>
+<script>if(typeof pako==='undefined')document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"><\/script>');</script>
+<script>
+/* ============ утилиты ============ */
+const $ = id => document.getElementById(id);
+const clamp = (v,a,b)=>Math.min(b,Math.max(a,v));
+let THREE_OK = typeof THREE !== 'undefined';
+let logoFileName='';
+
+/* ============ языки ============ */
+/* Значение ключа — строка или функция от параметров. Русский считается
+   полным словарём: если в английском ключа нет, подставится русский. */
+const I18N = {
+ru:{
+  'doc.title':'Pin Forge — генератор пинов из SVG',
+  'app.tagline':'SVG-логотип → STL значка под стандартную иглу-бабочку. Всё считается в браузере, файл никуда не уходит.',
+  'raw.summary':'Логотип не загрузился? Вставь код SVG вручную',
+  'raw.parse':'Разобрать',
+  'raw.req':'Требования: контуры с заливкой (обводки — Object → Path → Stroke to Path), текст переведён в кривые, без clipPath и масок.',
+  'g.tech':'Технология',
+  'tech.fdm02':'FDM, сопло 0.2 мм',
+  'tech.fdm04':'FDM, сопло 0.4 мм',
+  'tech.msla':'Фотополимер MSLA',
+  'g.base':'Основание',
+  'f.shape':'Форма',
+  'shape.disc':'Круглая плашка',
+  'shape.cut':'По контуру логотипа',
+  'shape.rect':'Скруглённый прямоугольник',
+  'f.diam':'Диаметр',
+  'f.marg':'Поля вокруг лого',
+  'f.rad':'Радиус скругления',
+  'f.ring':'Кант вокруг лого',
+  'f.solid':'Сплошное основание (без сквозных дырок)',
+  'f.thick':'Толщина',
+  'f.cham':'Фаска по краю',
+  'f.dome':'Купол сверху',
+  'g.logo':'Логотип',
+  'f.size':'Размер (макс. габарит)',
+  'f.rel':'Высота рельефа',
+  'f.bev':'Фаска букв',
+  'f.grow':'Утолщение штриха (±)',
+  'f.draft':'Уклон у основания букв',
+  'f.inv':'Врезать буквы внутрь (печать лицом вниз)',
+  'hint.grow':'Утолщение — грубый offset по нормали контура. Помогает, если у лого тонкие штрихи; больше 0.2&nbsp;мм может слипать соседние буквы.',
+  'g.mount':'Крепление',
+  'f.insert':'Вставка',
+  'ins.needle':'Игла-бабочка Ø10×0.5',
+  'ins.mag5':'Магнит 5×2 мм',
+  'ins.mag6':'Магнит 6×3 мм',
+  'ins.mag8':'Магнит 8×3 мм',
+  'ins.custom':'Свои размеры',
+  'f.wall':'Стенка вокруг гнезда',
+  'f.fwall':'Стенка под лицом',
+  'f.autoth':'Наращивать толщину под вставку',
+  'f.zone':'Зона поиска гнезда ±',
+  'f.off':'Сдвиг гнезда X / Y',
+  'f.seat':'Посадка',
+  'seat.socket':'В гнездо, утопить',
+  'seat.flat':'На площадку, приклеить',
+  'f.bh':'Высота площадки',
+  'f.lidon':'Закрыть крышкой (пауза в печати)',
+  'f.mount':'Крепление',
+  'mount.auto':'Авто: карман или площадка',
+  'mount.pocket':'Карман в основании',
+  'mount.inset':'Только гнездо, без площадки',
+  'mount.boss':'Площадка на спинке',
+  'mount.boss2':'Две площадки на спинке',
+  'mount.none':'Плоская спинка',
+  'f.bd':'Ø площадки (мин.)',
+  'f.bsp':'Разнос центров',
+  'f.pd':'Ø гнезда',
+  'f.pdep':'Глубина',
+  'hint.pocket':'Пятак на фото — Ø10&nbsp;мм. Карман 10.3&nbsp;мм даёт зазор под эпоксидку и утапливает диск заподлицо, чтобы значок не болтался.',
+  'g.check':'Проверка на пропечатку',
+  'st.stroke':'Мин. штрих',
+  'st.gap':'Мин. просвет / контрформа',
+  'st.ratio':'Рельеф ÷ штрих',
+  'st.size':'Габарит',
+  'st.h':'Толщина полная',
+  'st.vol':'Объём (≈ смолы)',
+  'f.plate':'Тестовая плашка 3×3 вместо пина',
+  'f.fmt':'Формат',
+  'fmt.zip':'STL + памятка (ZIP)',
+  'fmt.3mf':'Проект Orca / Bambu (.3mf)',
+  'f.printer':'Принтер',
+  'hint.zip':'В архиве: модель + памятка по печати на фотополимернике.',
+  'u.mm':'мм',
+
+  'drop.title':'Загрузить SVG логотипа',
+  'drop.sub':'перетащи файл сюда или нажми · текст должен быть в кривых',
+  'drop.replace':'заменить',
+  'drop.done':'SVG разобран',
+  'flip.back':'Показать спинку',
+  'flip.front':'Показать лицо',
+  'dl.zip':'Скачать STL (в ZIP)',
+  'dl.3mf':'Скачать проект (.3mf)',
+  'printer.gen02':'Любой, сопло 0.2',
+  'printer.gen04':'Любой, сопло 0.4',
+
+  'msg.start':'Загрузи SVG логотипа, чтобы начать.',
+  'msg.noThree':'Не загрузилась библиотека three.js. Обнови страницу.',
+  'msg.parsed':n=>'Разобрано контуров: '+n+'. Красные точки на карте — места, которые не пропечатаются.',
+  'msg.saved':'Файл отправлен на сохранение.',
+  'msg.cancelled':'Сохранение отменено.',
+  'msg.rate':'Диалог сохранения уже открыт. Подожди пару секунд и нажми ещё раз.',
+  'msg.zipWrap':nm=>'Формат .3mf напрямую не отдаётся, файл лежит внутри '+nm+'. Распакуй и открывай в слайсере.',
+  'msg.saveFail':c=>'Не удалось сохранить: '+c,
+  'msg.saveFallback':c=>'Не удалось сохранить через Claude ('+c+'), пробую обычную загрузку.',
+  'msg.mfFail':e=>'Не удалось собрать 3MF: '+e,
+  'err.code':'ошибка',
+
+  'err.noSvg':'В файле не найден элемент &lt;svg&gt;',
+  'err.noRings':'Контуры не найдены.',
+  'err.noRingsText':' В SVG есть &lt;text&gt; — переведи текст в кривые.',
+  'err.noRingsFill':' Проверь, что фигуры с заливкой, а не только обводка.',
+
+  'ins.lbl.needle':'игла-бабочка Ø10',
+  'ins.lbl.mag5':'магнит 5×2',
+  'ins.lbl.mag6':'магнит 6×3',
+  'ins.lbl.mag8':'магнит 8×3',
+  'ins.lbl.custom':'своё',
+
+  'sb.tris':n=>n+' тр.',
+  'sb.rings':n=>n+' контуров',
+  'sb.outline':src=>' · контур: '+src,
+  'sb.insert':'вставка',
+  'src.raster':'растр',
+  'src.simple':'упрощённый',
+  'size.tile':s=>s+' мм (плашка)',
+  'size.disc':d=>d+' мм ⌀',
+  'size.rect':(a,b)=>a+'×'+b+' мм',
+  'st.hBody':v=>' (тело '+v+')',
+  'u.cm3':' см³',
+  'u.mmSuffix':' мм',
+
+  'mt.flatBack':'спинка плоская',
+  'mt.socketProud':(c,o)=>'гнездо '+c+' мм, выступает '+o,
+  'mt.sunk':'утоплено целиком',
+  'mt.padGlue':h=>'площадка '+h+' мм, клеить встык',
+  'mt.glueBack':'клеить прямо на спинку',
+  'mt.sunkOut':(c,o)=>'утоплено '+c+', наружу '+o+' мм',
+  'mt.underLid':'полностью внутри, под крышкой',
+  'mt.inBody':'полностью в теле',
+  'mt.spot':(list,r)=>'гнездо '+list+' мм, запас Ø'+r,
+  'mt.and':' и ',
+
+  'w.thickUp':(a,b,c)=>'Толщина тела поднята с '+a+' до '+b+' мм: вставка уходит целиком, над ней остаётся '+c+' мм — буквы лягут на сплошную поверхность.',
+  'w.engrave':r=>'Гравировка по контуру при канте '+r+' мм: фоном остаётся только ободок, буквы превращаются в сквозные ямы. Поставь кант 2–3 мм.',
+  'w.padHead':flat=>flat?'Плоская площадка Ø':'Площадка Ø',
+  'w.padBack':' мм на спинке',
+  'w.padButt':', вставка клеится встык',
+  'w.padSunk':(c,o)=>', утоплено в тело '+c+' мм, наружу '+o+' мм',
+  'w.padNarrow':pd=>'. Спинка узкая: диск Ø'+pd+' мм шире её, площадка выходит за контур',
+  'w.padNoFit':(pd,best)=>'. Вставка Ø'+pd+' мм не помещается в контур — в лучшей точке влезает Ø'+best+' мм. Увеличь размер лого или кант, либо возьми вставку меньше',
+  'w.padTail':'. Край площадки нависает: при печати лицом вниз включи поддержки.',
+  'w.noFit':pd=>'Вставка Ø'+pd+' мм шире контура — гнездо не сделать. Увеличь лого или кант, либо возьми вставку меньше.',
+  'w.proud':(o,need)=>'Вставка выступает на '+o+' мм за спинку. Поддержки не нужны — печатается как обычное глухое отверстие. Чтобы утопить целиком, толщина должна быть '+need+' мм.',
+  'w.fwall':v=>'Стенка под лицом '+v+' мм — магнит может проступить бугром на лицевой стороне и просвечивать при тонком покрытии.',
+  'w.wall':v=>'Стенка площадки '+v+' мм — это 2 линии при сопле 0.2. Меньше не печатай.',
+  'w.offCenter':v=>'Ближе к центру вставка не помещается, гнездо ушло на '+v+' мм вбок. Пин будет заваливаться — увеличь размер лого или кант, либо поставь два крепления.',
+
+  'tip.strokeThin':(bad,size,add)=>'Штрих тоньше '+bad+' мм — не пропечатается. Увеличь лого до '+size+' мм или добавь утолщение +'+add+' мм.',
+  'tip.strokeEdge':add=>'Штрих на грани: добавь утолщение +'+add+' мм.',
+  'tip.perims':(n,target,val)=>'Подгони штрих под '+n+' периметра = '+target+' мм: утолщение '+val+' мм. Иначе слайсер полезет с gap-fill и буквы поплывут.',
+  'tip.layers':(rel,n,lay,few)=>'Рельеф '+rel+' мм = '+n+' слоёв по '+lay+' мм.'+(few?' Мало — от 4 слоёв.':''),
+  'tip.gapThin':v=>'Просветы меньше '+v+' мм — заплывут. Утолщение тут только навредит, нужен размер.',
+  'tip.gapTight':'Просветы тесные: в слайсере поставь XY compensation −0.05 мм, иначе контрформы затянет.',
+  'tip.ratio':(r,v)=>'Рельеф выше штриха больше чем в '+r+' раза — буквы станут хрупкими. Снизь до '+v+' мм.',
+  'tip.seam':'На FDM выпуклые буквы дают шов на каждой литере. Режим «врезать буквы внутрь» + печать лицом вниз даёт зеркальную лицевую поверхность без швов.',
+  'tip.draft':'Уклон 0 — буквы будут скалываться при снятии поддержек.',
+  'tip.ok':'Геометрия в допуске. Перед боевой печатью прогони тестовую плашку.',
+
+  'guide':(p,meta,ins,name)=>`PIN FORGE — модель ${name}
+Габарит: ${meta.size}, полная толщина ${meta.totalH.toFixed(2)} мм
+Рельеф логотипа: ${p.rel} мм, фаска букв ${p.bev} мм, уклон основания ${p.draft} мм
+${p.plate?`ТЕСТОВАЯ ПЛАШКА 3x3. Колонки слева направо: лого ${(p.logo*0.85).toFixed(1)} / ${p.logo.toFixed(1)} / ${(p.logo*1.15).toFixed(1)} мм.
+Ряды сверху вниз: рельеф 0.30 / 0.42 / 0.55 мм. Печатать одним заданием, смотреть под лупой.`:''}
+Крепление: ${ins.label} — ${p.mount==='pocket'?'гнездо в теле':p.mount==='boss'?('пятак на спинке Ø'+p.bd+'×'+p.bh+' мм'):p.mount==='boss2'?('два пятака Ø'+p.bd+' мм, разнос '+p.bsp+' мм'):'плоская спинка'}
+Гнездо: Ø${p.pd} мм, глубина ${p.pdep} мм${p.lid>0.05?(', закрыто крышкой '+p.lid+' мм')+'\nПАУЗА: печать лицом вниз, поставить паузу на высоте '+(meta.totalH-p.lid).toFixed(2)+' мм, вложить вставку, продолжить.':', открытое — вклеить эпоксидкой'}${ins.mag?`
+МАГНИТЫ: приклеивать только в паре с ответным магнитом — так полярность выставится сама.
+Ответный магнит за тканью, между ними 0.5-1 мм пластика и ткань: держит уверенно.
+Если магнитов два — оба должны смотреть наружу одним полюсом.`:''}
+
+ПЕЧАТЬ (MSLA / фотополимер)
+- Слой: 0.02-0.03 мм. FDM для такого рельефа не годится.
+- Смола: ABS-like / Tough. Обычная «стандартная» хрупкая на тонких буквах.
+- Ориентация: наклон 20-30 градусов, лицом ОТ платформы, поддержки — на плоскую спинку.
+  Плашмя на платформу не класть: присос и слоновья нога смажут рельеф.
+- Anti-aliasing: включить.
+- Экспозиция: сделать тест (XP Finder / Cones of Calibration) и взять на 10-15%
+  НИЖЕ обычной — переэкспозиция заплывает мелкий текст.
+- Rest time before lift / light-off delay: 2-4 с. Скорость подъёма снизить.
+- Поддержки: кончики 0.25-0.35 мм, только на спинку, плотнее по краям.
+
+ПОСТОБРАБОТКА
+- Мойка ИПС: 40-60 секунд, не дольше — долгая мойка размягчает тонкие штрихи.
+- Продуть сжатым воздухом, дать испариться, потом УФ 2-4 минуты, лучше в воде.
+- Срезать поддержки после мойки, но ДО финальной засветки — смола ещё мягкая.
+
+ПОД МЕТАЛЛ
+1. Праймер-филлер аэрозолью, 2 тонких слоя, шкурка 1000-1500 между слоями.
+2. Хром-эффект: Molotow Liquid Chrome / MTN chrome, наносить в один проход.
+3. Или гальваника: токопроводящий графит/лак -> медь -> никель. Выглядит и весит как металл.
+4. Эмаль: цветные углубления заливать УФ-смолой шприцем, борта между цветами от 0.35 мм.
+
+СБОРКА
+- Обезжирить карман, эпоксидка 5-минутка (не суперклей — он белит поверхность).
+- Каплю в карман, вдавить пятак, выровнять по оси, сушить лицом вверх 30 минут.
+`
+},
+en:{
+  'doc.title':'Pin Forge — SVG logo to printable pin',
+  'app.tagline':'An SVG logo becomes a printable lapel pin. Everything is computed in your browser, the file never leaves it.',
+  'raw.summary':'Logo will not load? Paste the SVG code by hand',
+  'raw.parse':'Parse',
+  'raw.req':'Requirements: filled paths (for strokes use Object → Path → Stroke to Path), text converted to outlines, no clipPath and no masks.',
+  'g.tech':'Process',
+  'tech.fdm02':'FDM, 0.2 mm nozzle',
+  'tech.fdm04':'FDM, 0.4 mm nozzle',
+  'tech.msla':'MSLA resin',
+  'g.base':'Base',
+  'f.shape':'Shape',
+  'shape.disc':'Round disc',
+  'shape.cut':'Follow the logo outline',
+  'shape.rect':'Rounded rectangle',
+  'f.diam':'Diameter',
+  'f.marg':'Margin around the logo',
+  'f.rad':'Corner radius',
+  'f.ring':'Border around the logo',
+  'f.solid':'Solid base, no through holes',
+  'f.thick':'Thickness',
+  'f.cham':'Edge chamfer',
+  'f.dome':'Top dome',
+  'g.logo':'Logo',
+  'f.size':'Size (longest side)',
+  'f.rel':'Relief height',
+  'f.bev':'Letter bevel',
+  'f.grow':'Stroke thickening (±)',
+  'f.draft':'Draft at the letter base',
+  'f.inv':'Engrave letters inward (print face down)',
+  'hint.grow':'Thickening is a rough offset along the outline normal. It rescues thin logos; past 0.2&nbsp;mm it starts merging neighbouring letters.',
+  'g.mount':'Fastening',
+  'f.insert':'Insert',
+  'ins.needle':'Butterfly clutch pin Ø10×0.5',
+  'ins.mag5':'Magnet 5×2 mm',
+  'ins.mag6':'Magnet 6×3 mm',
+  'ins.mag8':'Magnet 8×3 mm',
+  'ins.custom':'Custom size',
+  'f.wall':'Wall around the socket',
+  'f.fwall':'Wall under the face',
+  'f.autoth':'Grow thickness to fit the insert',
+  'f.zone':'Socket search zone ±',
+  'f.off':'Socket offset X / Y',
+  'f.seat':'Seating',
+  'seat.socket':'Recess into a socket',
+  'seat.flat':'Glue onto a pad',
+  'f.bh':'Pad height',
+  'f.lidon':'Close with a lid (pause the print)',
+  'f.mount':'Mount',
+  'mount.auto':'Auto: pocket or pad',
+  'mount.pocket':'Pocket in the base',
+  'mount.inset':'Socket only, no pad',
+  'mount.boss':'Pad on the back',
+  'mount.boss2':'Two pads on the back',
+  'mount.none':'Flat back',
+  'f.bd':'Pad Ø (min.)',
+  'f.bsp':'Centre spacing',
+  'f.pd':'Socket Ø',
+  'f.pdep':'Depth',
+  'hint.pocket':'A standard clutch disc is Ø10&nbsp;mm. A 10.3&nbsp;mm pocket leaves room for epoxy and sinks the disc flush so the pin does not wobble.',
+  'g.check':'Printability check',
+  'st.stroke':'Min. stroke',
+  'st.gap':'Min. gap / counter',
+  'st.ratio':'Relief ÷ stroke',
+  'st.size':'Overall size',
+  'st.h':'Total thickness',
+  'st.vol':'Volume (≈ resin)',
+  'f.plate':'3×3 test tile instead of a pin',
+  'f.fmt':'Format',
+  'fmt.zip':'STL + notes (ZIP)',
+  'fmt.3mf':'Orca / Bambu project (.3mf)',
+  'f.printer':'Printer',
+  'hint.zip':'The archive holds the model plus notes on resin printing.',
+  'u.mm':'mm',
+
+  'drop.title':'Upload a logo SVG',
+  'drop.sub':'drop a file here or click · text must be converted to outlines',
+  'drop.replace':'replace',
+  'drop.done':'SVG parsed',
+  'flip.back':'Show the back',
+  'flip.front':'Show the front',
+  'dl.zip':'Download STL (ZIP)',
+  'dl.3mf':'Download project (.3mf)',
+  'printer.gen02':'Any printer, 0.2 nozzle',
+  'printer.gen04':'Any printer, 0.4 nozzle',
+
+  'msg.start':'Upload a logo SVG to begin.',
+  'msg.noThree':'three.js failed to load. Reload the page.',
+  'msg.parsed':n=>'Parsed '+n+' contours. Red dots on the map mark places that will not print.',
+  'msg.saved':'File handed over for saving.',
+  'msg.cancelled':'Saving cancelled.',
+  'msg.rate':'A save dialog is already open. Wait a couple of seconds and press again.',
+  'msg.zipWrap':nm=>'The .3mf cannot be handed over directly, so it is inside '+nm+'. Unpack it and open it in your slicer.',
+  'msg.saveFail':c=>'Could not save: '+c,
+  'msg.saveFallback':c=>'Saving through Claude failed ('+c+'), falling back to a normal download.',
+  'msg.mfFail':e=>'Could not build the 3MF: '+e,
+  'err.code':'error',
+
+  'err.noSvg':'No &lt;svg&gt; element found in the file',
+  'err.noRings':'No contours found.',
+  'err.noRingsText':' The SVG still has &lt;text&gt; — convert the text to outlines.',
+  'err.noRingsFill':' Check that the shapes are filled, not stroke-only.',
+
+  'ins.lbl.needle':'butterfly clutch Ø10',
+  'ins.lbl.mag5':'magnet 5×2',
+  'ins.lbl.mag6':'magnet 6×3',
+  'ins.lbl.mag8':'magnet 8×3',
+  'ins.lbl.custom':'custom',
+
+  'sb.tris':n=>n+' tri',
+  'sb.rings':n=>n+' contours',
+  'sb.outline':src=>' · outline: '+src,
+  'sb.insert':'insert',
+  'src.raster':'raster',
+  'src.simple':'simplified',
+  'size.tile':s=>s+' mm (tile)',
+  'size.disc':d=>d+' mm ⌀',
+  'size.rect':(a,b)=>a+'×'+b+' mm',
+  'st.hBody':v=>' (body '+v+')',
+  'u.cm3':' cm³',
+  'u.mmSuffix':' mm',
+
+  'mt.flatBack':'flat back',
+  'mt.socketProud':(c,o)=>'socket '+c+' mm, sticks out '+o,
+  'mt.sunk':'fully recessed',
+  'mt.padGlue':h=>'pad '+h+' mm, glue flush',
+  'mt.glueBack':'glue straight onto the back',
+  'mt.sunkOut':(c,o)=>'recessed '+c+', outside '+o+' mm',
+  'mt.underLid':'fully inside, under a lid',
+  'mt.inBody':'fully inside the body',
+  'mt.spot':(list,r)=>'socket '+list+' mm, clearance Ø'+r,
+  'mt.and':' and ',
+
+  'w.thickUp':(a,b,c)=>'Body thickness raised from '+a+' to '+b+' mm: the insert now sits entirely inside and '+c+' mm of material is left above it, so the letters land on a solid surface.',
+  'w.engrave':r=>'Engraving along the outline with a '+r+' mm border leaves only the rim as background, and the letters turn into through holes. Set the border to 2–3 mm.',
+  'w.padHead':flat=>flat?'Flat pad Ø':'Pad Ø',
+  'w.padBack':' mm on the back',
+  'w.padButt':', the insert is glued flush',
+  'w.padSunk':(c,o)=>', recessed '+c+' mm into the body, '+o+' mm outside',
+  'w.padNarrow':pd=>'. The back is narrow: the Ø'+pd+' mm disc is wider than it, so the pad runs past the outline',
+  'w.padNoFit':(pd,best)=>'. The Ø'+pd+' mm insert does not fit the outline — the best spot takes Ø'+best+' mm. Enlarge the logo or the border, or pick a smaller insert',
+  'w.padTail':'. The pad edge overhangs: enable supports when printing face down.',
+  'w.noFit':pd=>'The Ø'+pd+' mm insert is wider than the outline, so no socket can be cut. Enlarge the logo or the border, or pick a smaller insert.',
+  'w.proud':(o,need)=>'The insert sticks out '+o+' mm past the back. No supports are needed, it prints as an ordinary blind hole. To sink it completely the thickness must be '+need+' mm.',
+  'w.fwall':v=>'The wall under the face is '+v+' mm, so the magnet may telegraph as a bump on the front and show through a thin finish.',
+  'w.wall':v=>'The pad wall is '+v+' mm, which is 2 lines on a 0.2 nozzle. Do not go thinner.',
+  'w.offCenter':v=>'The insert does not fit nearer the centre, so the socket moved '+v+' mm sideways. The pin will tilt — enlarge the logo or the border, or use two mounts.',
+
+  'tip.strokeThin':(bad,size,add)=>'The stroke is thinner than '+bad+' mm and will not print. Enlarge the logo to '+size+' mm or add +'+add+' mm of thickening.',
+  'tip.strokeEdge':add=>'The stroke is borderline: add +'+add+' mm of thickening.',
+  'tip.perims':(n,target,val)=>'Tune the stroke to '+n+' perimeters = '+target+' mm, which means '+val+' mm of thickening. Otherwise the slicer falls back to gap fill and the letters go mushy.',
+  'tip.layers':(rel,n,lay,few)=>'Relief '+rel+' mm = '+n+' layers of '+lay+' mm.'+(few?' Too few, use at least 4.':''),
+  'tip.gapThin':v=>'Gaps under '+v+' mm will close up. Thickening only hurts here, the logo needs to be bigger.',
+  'tip.gapTight':'Gaps are tight: set XY compensation to −0.05 mm in the slicer, otherwise the counters fill in.',
+  'tip.ratio':(r,v)=>'The relief is more than '+r+'× the stroke width, so the letters turn brittle. Bring it down to '+v+' mm.',
+  'tip.seam':'On FDM, raised letters leave a seam on every glyph. Engraving the letters inward and printing face down gives a mirror-smooth front with no seams.',
+  'tip.draft':'Draft is 0, so the letters will chip when you remove the supports.',
+  'tip.ok':'Geometry is within tolerance. Run the test tile before the real print.',
+
+  'guide':(p,meta,ins,name)=>`PIN FORGE — model ${name}
+Overall size: ${meta.size}, total thickness ${meta.totalH.toFixed(2)} mm
+Logo relief: ${p.rel} mm, letter bevel ${p.bev} mm, base draft ${p.draft} mm
+${p.plate?`3x3 TEST TILE. Columns left to right: logo ${(p.logo*0.85).toFixed(1)} / ${p.logo.toFixed(1)} / ${(p.logo*1.15).toFixed(1)} mm.
+Rows top to bottom: relief 0.30 / 0.42 / 0.55 mm. Print in one job and inspect under a loupe.`:''}
+Fastening: ${ins.label} — ${p.mount==='pocket'?'pocket in the body':p.mount==='boss'?('pad on the back Ø'+p.bd+'×'+p.bh+' mm'):p.mount==='boss2'?('two pads Ø'+p.bd+' mm, '+p.bsp+' mm apart'):'flat back'}
+Socket: Ø${p.pd} mm, depth ${p.pdep} mm${p.lid>0.05?(', closed with a '+p.lid+' mm lid')+'\nPAUSE: print face down, pause at height '+(meta.totalH-p.lid).toFixed(2)+' mm, drop the insert in, resume.':', open — glue it in with epoxy'}${ins.mag?`
+MAGNETS: glue them only as a pair with the mating magnet, that way the polarity sets itself.
+With the mating magnet behind the fabric and 0.5-1 mm of plastic plus cloth between them, the hold is solid.
+If there are two magnets, both must face outward with the same pole.`:''}
+
+PRINTING (MSLA / resin)
+- Layer: 0.02-0.03 mm. FDM is not suitable for relief this fine.
+- Resin: ABS-like / Tough. Plain "standard" resin is brittle on thin letters.
+- Orientation: tilt 20-30 degrees, face AWAY from the plate, supports on the flat back.
+  Do not lay it flat on the plate: suction and elephant foot will smear the relief.
+- Anti-aliasing: on.
+- Exposure: run a test (XP Finder / Cones of Calibration) and go 10-15%
+  BELOW your usual value — overexposure closes up small text.
+- Rest time before lift / light-off delay: 2-4 s. Slow the lift speed down.
+- Supports: 0.25-0.35 mm tips, back only, denser along the edges.
+
+POST-PROCESSING
+- IPA wash: 40-60 seconds, no longer — a long wash softens thin strokes.
+- Blow off with compressed air, let it flash off, then UV cure 2-4 minutes, ideally under water.
+- Cut the supports off after the wash but BEFORE the final cure, while the resin is still soft.
+
+METAL FINISH
+1. Filler primer from a rattle can, 2 thin coats, 1000-1500 grit between coats.
+2. Chrome effect: Molotow Liquid Chrome / MTN chrome, lay it down in a single pass.
+3. Or electroplating: conductive graphite/lacquer -> copper -> nickel. Looks and weighs like metal.
+4. Enamel: fill the colour recesses with UV resin from a syringe, keep walls between colours at 0.35 mm or more.
+
+ASSEMBLY
+- Degrease the pocket, use 5-minute epoxy (not superglue, it blooms white on the surface).
+- One drop in the pocket, press the disc in, align it on axis, cure face up for 30 minutes.
+`
+}
+};
+
+let LANG='ru';
+function t(k){
+  const d=I18N[LANG]||I18N.ru;
+  let v = (k in d) ? d[k] : I18N.ru[k];
+  if(v===undefined) return k;
+  if(typeof v==='function') return v.apply(null,Array.prototype.slice.call(arguments,1));
+  return v;
+}
+function nfmt(n){ return Math.round(n).toLocaleString(LANG==='en'?'en-US':'ru-RU'); }
+
+/* функции, которые надо перерисовать при смене языка; заполняются в wire() */
+const UI={};
+
+function setLang(l){
+  LANG = (l==='en') ? 'en' : 'ru';
+  try{ localStorage.setItem('pinforge.lang',LANG); }catch(e){}
+  applyLang();
+}
+
+function applyLang(){
+  document.documentElement.lang=LANG;
+  document.title=t('doc.title');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{ el.textContent=t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-html]').forEach(el=>{ el.innerHTML=t(el.dataset.i18nHtml); });
+  document.querySelectorAll('[data-lang]').forEach(b=>b.setAttribute('aria-pressed', b.dataset.lang===LANG ? 'true' : 'false'));
+
+  const d=$('drop');
+  if(d){
+    const loaded=d.classList.contains('loaded');
+    $('drop-title').textContent = loaded ? (logoFileName || t('drop.done')) : t('drop.title');
+    $('drop-sub').textContent   = loaded ? t('drop.replace') : t('drop.sub');
+  }
+  if(UI.sliders) UI.sliders();
+  if(UI.printers) UI.printers();
+  if(UI.flip) UI.flip();
+  if(UI.fmt) UI.fmt();
+  renderSay();
+  if(logoRings && THREE_OK) refresh();
+}
+
+
+let lastSay=null;
+function say(text, ok){
+  if(!text){ lastSay=null; renderSay(); return; }
+  lastSay={ fn:(typeof text==='function'?text:()=>text), ok:!!ok };
+  renderSay();
+}
+function renderSay(){
+  const m=$('msg'); if(!m) return;
+  if(!lastSay){ m.innerHTML=''; return; }
+  m.innerHTML='<div class="msg'+(lastSay.ok?' ok':'')+'">'+lastSay.fn()+'</div>';
+}
+
+/* ============ разбор SVG ============ */
+const SVGNS='http://www.w3.org/2000/svg';
+
+function readNums(s,n){
+  const re=/[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?/g;
+  const vals=[]; let end=0,m;
+  while(vals.length<n && (m=re.exec(s))){ vals.push(parseFloat(m[0])); end=m.index+m[0].length; }
+  if(vals.length<n) return null;
+  return {vals,end};
+}
+
+function absolutizeStart(chunk,cur){
+  const cmd=chunk[0], body=chunk.slice(1);
+  const n=readNums(body,2);
+  if(!n) return null;
+  const x = cmd==='m' ? cur.x+n.vals[0] : n.vals[0];
+  const y = cmd==='m' ? cur.y+n.vals[1] : n.vals[1];
+  let rest=body.slice(n.end).replace(/^[\s,]+/,'');
+  let d='M '+x+' '+y;
+  if(rest){
+    if(/^[-+.\d]/.test(rest)) d += (cmd==='m'?' l ':' L ')+rest;
+    else d += ' '+rest;
+  }
+  return {d,start:{x,y}};
+}
+
+function elementToPathD(el){
+  const t=el.tagName.toLowerCase();
+  const a=k=>parseFloat(el.getAttribute(k)||'0');
+  if(t==='path') return el.getAttribute('d');
+  if(t==='polygon'||t==='polyline'){
+    const p=(el.getAttribute('points')||'').trim().split(/[\s,]+/).map(Number);
+    if(p.length<6) return null;
+    let d='M '+p[0]+' '+p[1];
+    for(let i=2;i<p.length-1;i+=2) d+=' L '+p[i]+' '+p[i+1];
+    return d+' Z';
+  }
+  if(t==='rect'){
+    const x=a('x'),y=a('y'),w=a('width'),h=a('height');
+    if(w<=0||h<=0) return null;
+    return `M ${x} ${y} H ${x+w} V ${y+h} H ${x} Z`;
+  }
+  if(t==='circle'){
+    const cx=a('cx'),cy=a('cy'),r=a('r');
+    if(r<=0) return null;
+    return `M ${cx-r} ${cy} A ${r} ${r} 0 1 0 ${cx+r} ${cy} A ${r} ${r} 0 1 0 ${cx-r} ${cy} Z`;
+  }
+  if(t==='ellipse'){
+    const cx=a('cx'),cy=a('cy'),rx=a('rx'),ry=a('ry');
+    if(rx<=0||ry<=0) return null;
+    return `M ${cx-rx} ${cy} A ${rx} ${ry} 0 1 0 ${cx+rx} ${cy} A ${rx} ${ry} 0 1 0 ${cx-rx} ${cy} Z`;
+  }
+  return null;
+}
+
+function parseSVGtoRings(svgText){
+  const holder=document.createElement('div');
+  holder.style.cssText='position:fixed;left:-99999px;top:0;width:1200px;height:1200px;opacity:0;pointer-events:none;overflow:hidden';
+  holder.innerHTML=svgText;
+  const svg=holder.querySelector('svg');
+  if(!svg) throw new Error(t('err.noSvg'));
+  document.body.appendChild(holder);
+  const rings=[];
+  let skippedText=0;
+  try{
+    svg.setAttribute('width','1200'); svg.setAttribute('height','1200');
+    skippedText = svg.querySelectorAll('text,tspan').length;
+    let bb;
+    try{ bb=svg.getBBox(); }catch(e){ bb={width:100,height:100}; }
+    const diag=Math.hypot(bb.width||100,bb.height||100)||100;
+    const maxSeg=Math.max(diag/700,1e-9);
+    const els=Array.from(svg.querySelectorAll('path,polygon,polyline,rect,circle,ellipse'));
+    for(const el of els){
+      if(el.closest('defs,clipPath,mask,marker')) continue;
+      let cs;
+      try{ cs=getComputedStyle(el); }catch(e){ cs=null; }
+      if(cs && (cs.display==='none' || cs.visibility==='hidden')) continue;
+      if(cs && cs.fill==='none') continue;
+      const d=elementToPathD(el);
+      if(!d) continue;
+      const tmp=document.createElementNS(SVGNS,'path');
+      const tr=el.getAttribute('transform');
+      if(tr) tmp.setAttribute('transform',tr);
+      el.parentNode.insertBefore(tmp,el);
+      let ctm=null;
+      try{ ctm=tmp.getCTM(); }catch(e){}
+      const chunks=d.match(/[Mm][^Mm]*/g)||[];
+      let cur={x:0,y:0};
+      for(const ch of chunks){
+        const abs=absolutizeStart(ch,cur);
+        if(!abs) continue;
+        cur=abs.start;
+        tmp.setAttribute('d',abs.d);
+        let total=0;
+        try{ total=tmp.getTotalLength(); }catch(e){ continue; }
+        if(!isFinite(total)||total<=maxSeg) continue;
+        const n=clamp(Math.ceil(total/maxSeg),16,3000);
+        const pts=[];
+        for(let i=0;i<n;i++){
+          let p=tmp.getPointAtLength(total*i/n);
+          if(ctm) p=p.matrixTransform(ctm);
+          pts.push({x:p.x,y:-p.y});
+        }
+        try{
+          let e=tmp.getPointAtLength(total);
+          cur={x:e.x,y:e.y};
+        }catch(e){}
+        if(pts.length>=3) rings.push(dedupe(pts));
+      }
+      tmp.remove();
+    }
+  } finally {
+    holder.remove();
+  }
+  if(!rings.length){
+    throw new Error(t('err.noRings') + (skippedText?t('err.noRingsText'):t('err.noRingsFill')));
+  }
+  return rings;
+}
+
+function dedupe(pts){
+  const out=[pts[0]];
+  for(let i=1;i<pts.length;i++){
+    const p=pts[i],q=out[out.length-1];
+    if(Math.hypot(p.x-q.x,p.y-q.y)>1e-7) out.push(p);
+  }
+  return out;
+}
+
+function signedArea(p){
+  let s=0;
+  for(let i=0,j=p.length-1;i<p.length;j=i++) s+=(p[j].x*p[i].y-p[i].x*p[j].y);
+  return s/2;
+}
+function pointInPoly(pt,poly){
+  let inside=false;
+  for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+    const a=poly[i],b=poly[j];
+    if(((a.y>pt.y)!==(b.y>pt.y)) && (pt.x < (b.x-a.x)*(pt.y-a.y)/((b.y-a.y)||1e-12)+a.x)) inside=!inside;
+  }
+  return inside;
+}
+
+/* сдвиг контура по нормали + чистка самопересечений на вогнутых местах */
+function offsetRing(pts, delta, outward){
+  if(Math.abs(delta)<1e-6) return pts;
+  const n=pts.length, out=[];
+  const sign = (signedArea(pts)>0?1:-1) * (outward?1:-1);
+  for(let i=0;i<n;i++){
+    const p=pts[i], a=pts[(i-1+n)%n], b=pts[(i+1)%n];
+    let nx=b.y-a.y, ny=-(b.x-a.x);
+    const L=Math.hypot(nx,ny)||1;
+    nx/=L; ny/=L;
+    out.push({x:p.x + nx*delta*sign, y:p.y + ny*delta*sign});
+  }
+  const d=Math.abs(delta);
+  if(d<0.05||n<24) return out;
+  // точки, «завернувшиеся» внутрь исходного контура, дают петли и дырки — убираем
+  const st=Math.max(1,Math.ceil(n/220)), ref=[];
+  for(let i=0;i<n;i+=st) ref.push(pts[i]);
+  const lim=(d*0.8)*(d*0.8);
+  const kept=out.filter(q=>{
+    let m=1e18;
+    for(let i=0;i<ref.length;i++){ const r=ref[i],a=r.x-q.x,b=r.y-q.y,t=a*a+b*b; if(t<m)m=t; }
+    return m>=lim;
+  });
+  return kept.length>=Math.max(12,n*0.25) ? kept : out;
+}
+
+/* ============ контуры → THREE.Shape ============ */
+function ringsToShapes(rings, growth, noHoles){
+  const items=rings.map(pts=>({pts,area:Math.abs(signedArea(pts))}))
+                   .filter(r=>r.area>1e-8)
+                   .sort((a,b)=>b.area-a.area);
+  items.forEach(it=>{ it.parent=-1; });
+  for(let i=0;i<items.length;i++)
+    for(let j=0;j<i;j++)
+      if(pointInPoly(items[i].pts[0],items[j].pts)) items[i].parent=j;
+  const depth=i=>{ let d=0,k=i,guard=0; while(items[k].parent>=0&&guard++<64){ d++; k=items[k].parent; } return d; };
+  items.forEach((it,i)=>{ it.depth=depth(i); });
+
+  const shapes=[], map=new Map();
+  items.forEach((it,i)=>{
+    if(it.depth%2===0){
+      const pts=growth?offsetRing(it.pts,growth,true):it.pts;
+      const s=new THREE.Shape(pts.map(p=>new THREE.Vector2(p.x,p.y)));
+      map.set(i,s); shapes.push(s);
+    }
+  });
+  items.forEach((it,i)=>{
+    if(it.depth%2===1 && !noHoles){
+      const s=map.get(it.parent);
+      if(s){
+        const pts=growth?offsetRing(it.pts,growth,false):it.pts;
+        s.holes.push(new THREE.Path(pts.map(p=>new THREE.Vector2(p.x,p.y))));
+      }
+    }
+  });
+  return {shapes, count:items.length};
+}
+
+/* ============ анализ тонких мест ============ */
+function buildSegments(rings){
+  const seg=[];
+  rings.forEach((r,ri)=>{
+    for(let i=0;i<r.length;i++){
+      const a=r[i], b=r[(i+1)%r.length];
+      seg.push({ax:a.x,ay:a.y,bx:b.x,by:b.y,ri,i});
+    }
+  });
+  return seg;
+}
+function insideAll(pt,rings){
+  let inside=false;
+  for(const r of rings) if(pointInPoly(pt,r)) inside=!inside;
+  return inside;
+}
+function rayHit(px,py,dx,dy,seg,skipRi,skipI,skipRange,maxT){
+  let best=maxT;
+  for(let s=0;s<seg.length;s++){
+    const g=seg[s];
+    if(g.ri===skipRi){
+      const d=Math.abs(g.i-skipI);
+      if(d<=skipRange) continue;
+    }
+    const ex=g.bx-g.ax, ey=g.by-g.ay;
+    const den=dx*ey-dy*ex;
+    if(Math.abs(den)<1e-12) continue;
+    const t=((g.ax-px)*ey-(g.ay-py)*ex)/den;
+    if(t<=1e-9||t>=best) continue;
+    const u=((g.ax-px)*dy-(g.ay-py)*dx)/den;
+    if(u<0||u>1) continue;
+    best=t;
+  }
+  return best;
+}
+function circleFits(rings,R,cx,cy){
+  cx=cx||0; cy=cy||0;
+  for(let i=0;i<64;i++){
+    const a=i/64*Math.PI*2;
+    if(!insideAll({x:cx+Math.cos(a)*R,y:cy+Math.sin(a)*R},rings)) return false;
+  }
+  return insideAll({x:cx,y:cy},rings);
+}
+function analyzeLogo(rings){
+  const seg=buildSegments(rings);
+  let minx=1e9,maxx=-1e9,miny=1e9,maxy=-1e9;
+  rings.forEach(r=>r.forEach(q=>{
+    if(q.x<minx)minx=q.x; if(q.x>maxx)maxx=q.x;
+    if(q.y<miny)miny=q.y; if(q.y>maxy)maxy=q.y;
+  }));
+  const diag=Math.hypot(maxx-minx,maxy-miny)||1;
+  const maxT=diag*0.35, eps=diag*1e-4;
+  let total=0; rings.forEach(r=>total+=r.length);
+  const stride=Math.max(1,Math.ceil(total/700));
+  const probes=[];
+  rings.forEach((r,ri)=>{
+    const n=r.length;
+    const skipRange=Math.max(2,Math.round(n*0.02));
+    for(let i=0;i<n;i+=stride){
+      const p=r[i], a=r[(i-1+n)%n], b=r[(i+1)%n];
+      let nx=b.y-a.y, ny=-(b.x-a.x);
+      const L=Math.hypot(nx,ny); if(L<1e-12) continue;
+      nx/=L; ny/=L;
+      if(!insideAll({x:p.x+nx*eps,y:p.y+ny*eps},rings)){ nx=-nx; ny=-ny; }
+      if(!insideAll({x:p.x+nx*eps,y:p.y+ny*eps},rings)) continue;
+      const tIn=rayHit(p.x+nx*eps,p.y+ny*eps,nx,ny,seg,ri,i,skipRange,maxT);
+      const tOut=rayHit(p.x-nx*eps,p.y-ny*eps,-nx,-ny,seg,ri,i,skipRange,maxT);
+      probes.push({x:p.x,y:p.y,t:tIn,g:tOut,maxT});
+    }
+  });
+  const pct=(arr,q)=>{ if(!arr.length) return 0; const s=arr.slice().sort((a,b)=>a-b); return s[Math.min(s.length-1,Math.floor(s.length*q))]; };
+  const strokes=probes.map(p=>p.t).filter(v=>v<maxT*0.98);
+  const gaps=probes.map(p=>p.g).filter(v=>v<maxT*0.98);
+  return {
+    probes, bbox:{minx,maxx,miny,maxy},
+    stroke: pct(strokes,0.04),
+    strokeMin: strokes.length?Math.min(...strokes):0,
+    gap: pct(gaps,0.02)
+  };
+}
+
+function drawMap(analysis,k,rings,T){
+  T=T||TECH.fdm02;
+  const c=$('map'); if(!c) return;
+  const ctx=c.getContext('2d');
+  const W=c.width,H=c.height;
+  ctx.clearRect(0,0,W,H);
+  if(!analysis) return;
+  const bb=analysis.bbox;
+  const w=bb.maxx-bb.minx, h=bb.maxy-bb.miny;
+  const pad=12;
+  const s=Math.min((W-pad*2)/w,(H-pad*2)/h);
+  const ox=(W-w*s)/2-bb.minx*s, oy=(H-h*s)/2+bb.maxy*s;
+  const X=x=>x*s+ox, Y=y=>-y*s+oy;
+  const ink=getComputedStyle(document.body).color;
+  ctx.fillStyle=ink; ctx.globalAlpha=0.85;
+  ctx.beginPath();
+  rings.forEach(r=>{
+    ctx.moveTo(X(r[0].x),Y(r[0].y));
+    for(let i=1;i<r.length;i++) ctx.lineTo(X(r[i].x),Y(r[i].y));
+    ctx.closePath();
+  });
+  ctx.fill('evenodd');
+  ctx.globalAlpha=1;
+  let bad=0;
+  analysis.probes.forEach(p=>{
+    const mmT=p.t*k, mmG=p.g*k;
+    let col=null;
+    if(p.t<p.maxT && mmT<T.stroke[1]) col='#e5484d';
+    else if(p.t<p.maxT && mmT<T.stroke[0]) col='#e3a341';
+    if(p.g<p.maxT && mmG<T.gap[1]) col='#e5484d';
+    if(col){
+      bad++;
+      ctx.fillStyle=col;
+      ctx.beginPath(); ctx.arc(X(p.x),Y(p.y),2.4,0,6.3); ctx.fill();
+    }
+  });
+  return bad;
+}
+
+/* ============ вставки ============ */
+const INS={
+  needle:{d:10.3,t:0.6,mag:false,lbl:'ins.lbl.needle'},
+  mag5  :{d:5.2, t:2.2,mag:true, lbl:'ins.lbl.mag5'},
+  mag6  :{d:6.2, t:3.2,mag:true, lbl:'ins.lbl.mag6'},
+  mag8  :{d:8.2, t:3.2,mag:true, lbl:'ins.lbl.mag8'},
+  custom:{d:0,   t:0,  mag:false,lbl:'ins.lbl.custom'}
+};
+
+/* ============ технологии ============ */
+const TECH={
+  fdm02:{label:'FDM 0.2', wall:0.25, layer:0.08, stroke:[0.50,0.40], gap:[0.45,0.35], ratio:2.2},
+  fdm04:{label:'FDM 0.4', wall:0.42, layer:0.15, stroke:[0.85,0.70], gap:[0.70,0.55], ratio:2.2},
+  msla :{label:'MSLA',    wall:0,    layer:0.03, stroke:[0.50,0.40], gap:[0.45,0.35], ratio:1.4}
+};
+
+const V2=pts=>pts.map(p=>new THREE.Vector2(p.x,p.y));
+function ringsToParts(rings, growth){
+  const items=rings.map(pts=>({pts,area:Math.abs(signedArea(pts))}))
+                   .filter(r=>r.area>1e-8).sort((a,b)=>b.area-a.area);
+  items.forEach(it=>{it.parent=-1;});
+  for(let i=0;i<items.length;i++)
+    for(let j=0;j<i;j++)
+      if(pointInPoly(items[i].pts[0],items[j].pts)) items[i].parent=j;
+  const dep=i=>{let d=0,k=i,g=0;while(items[k].parent>=0&&g++<64){d++;k=items[k].parent;}return d;};
+  const outers=[],inners=[];
+  items.forEach((it,i)=>{
+    if(dep(i)%2===0) outers.push(growth?offsetRing(it.pts,growth,true):it.pts);
+    else inners.push(growth?offsetRing(it.pts,growth,false):it.pts);
+  });
+  return {outers,inners};
+}
+function attachHoles(shapes,holeRings){
+  holeRings.forEach(r=>{
+    let tgt=shapes[0];
+    for(const sh of shapes){
+      let pts; try{ pts=sh.getPoints(); }catch(e){ pts=null; }
+      if(pts&&pointInPoly(r[0],pts)){ tgt=sh; break; }
+    }
+    if(tgt) tgt.holes.push(new THREE.Path(V2(r)));
+  });
+}
+function discShape(R){
+  const s=new THREE.Shape();
+  s.absellipse(0,0,R,R,0,Math.PI*2,false);
+  return s;
+}
+
+/* ============ геометрия пина ============ */
+function baseLathe(D,h,ch,dome,pocketD,pocketDepth){
+  const R=D/2, pr=pocketD/2;
+  const pts=[];
+  if(pocketDepth>0 && pr>0.5 && pr<R-0.4){
+    pts.push(new THREE.Vector2(0,pocketDepth));
+    pts.push(new THREE.Vector2(pr,pocketDepth));
+    pts.push(new THREE.Vector2(pr,0));
+  } else {
+    pts.push(new THREE.Vector2(0,0));
+  }
+  const bch=Math.min(0.25,h*0.15);
+  pts.push(new THREE.Vector2(R-bch,0));
+  pts.push(new THREE.Vector2(R,bch));
+  const topEdge=Math.max(bch+0.05,h-ch);
+  pts.push(new THREE.Vector2(R,topEdge));
+  if(ch>0.01) pts.push(new THREE.Vector2(R-ch,h));
+  else pts.push(new THREE.Vector2(R,h));
+  if(dome>0.01){
+    const r0=R-Math.max(ch,0);
+    const steps=14;
+    for(let i=1;i<=steps;i++){
+      const t=i/steps, r=r0*Math.cos(t*Math.PI/2);
+      pts.push(new THREE.Vector2(r,h+dome*Math.sin(t*Math.PI/2)));
+    }
+  } else {
+    pts.push(new THREE.Vector2(0,h));
+  }
+  const g=new THREE.LatheGeometry(pts,192);
+  g.rotateX(Math.PI/2);
+  return g;
+}
+
+function outlinePlate(shapes,h,pocketD,pocketDepth){
+  // основание = контур логотипа, слегка раздутый
+  const geo=new THREE.ExtrudeGeometry(shapes,{depth:h,bevelEnabled:false,steps:1,curveSegments:1});
+  return geo;
+}
+
+let logoRings=null, logoName='ewento', analysis=null, buildWarn=[];
+const state={};
+
+function readParams(){
+  return {
+    tech:$('tech').value,
+    mode:$('mode').value, marg:+$('marg').value, rad:+$('rad').value, ring:+$('ring').value, solid:$('solid').checked,
+    D:+$('diam').value, h:+$('thick').value, ch:+$('cham').value, dome:+$('dome').value,
+    logo:+$('logo').value, rel:+$('rel').value, bev:+$('bev').value, grow:+$('grow').value,
+    draft:+$('draft').value, plate:$('plate').checked,
+    inv:$('inv').checked,
+    zone:+$('zone').value,
+    autoth:$('autoth').checked, seat:$('seat').value, padh:+$('bh').value||0.8,
+    wall:+$('wall').value, fwall:+$('fwall').value,
+    ox:+$('ox').value||0, oy:+$('oy').value||0,
+    insert:$('insert').value, lid:(INS[$('insert').value]&&INS[$('insert').value].mag)?+$('lid').value:0,
+    mount:$('mount').value, bd:+$('bd').value, bh:+$('bh').value, bsp:+$('bsp').value,
+    pock:$('mount').value==='pocket'||$('mount').value==='auto', pd:+$('pd').value, pdep:+$('pdep').value
+  };
+}
+
+function build(){
+  if(!logoRings || !THREE_OK) return null;
+  buildWarn=[];
+  const p=readParams();
+  if(!p.plate) return buildPin(p);
+  const root=new THREE.Group();
+  const sizes=[0.85,1,1.15], rels=[0.3,0.42,0.55];
+  let maxD=0;
+  const cells=[];
+  for(let r=0;r<3;r++) for(let c=0;c<3;c++){
+    const q=Object.assign({},p,{
+      mode:'disc', pock:false, mount:'none', lid:0, h:1.0, dome:0, ch:0.25,
+      logo:+(p.logo*sizes[c]).toFixed(2), rel:rels[r],
+      D:Math.max(p.logo*sizes[c]+5, 10)
+    });
+    const g=buildPin(q); if(!g) continue;
+    maxD=Math.max(maxD,q.D);
+    cells.push({g,r,c,q});
+  }
+  const pitch=maxD+2.5;
+  cells.forEach(({g,r,c})=>{
+    g.position.set((c-1)*pitch,(1-r)*pitch,0);
+    root.add(g);
+  });
+  root.userData.meta={
+    size:t('size.tile',(pitch*3).toFixed(0)+'×'+(pitch*3).toFixed(0)),
+    totalH:1+0.55, rings:cells.length?cells[0].g.userData.meta.rings:0, params:p, plate:true,
+    plateInfo:{sizes:sizes.map(s=>+(p.logo*s).toFixed(1)),rels}
+  };
+  return root;
+}
+
+function invertGeo(g){
+  const pos=g.attributes.position, arr=pos.array;
+  for(let i=0;i<pos.count;i+=3)
+    for(let c=0;c<3;c++){
+      const t=arr[(i+1)*3+c]; arr[(i+1)*3+c]=arr[(i+2)*3+c]; arr[(i+2)*3+c]=t;
+    }
+  g.computeVertexNormals();
+  return g;
+}
+function voidCyl(r,d,x,y,zc){
+  let g=new THREE.CylinderGeometry(r,r,d,48,1,false);
+  g=g.toNonIndexed();
+  g.rotateX(Math.PI/2);
+  g.translate(x,y,zc);
+  return invertGeo(g);
+}
+
+const PADMAT=new THREE.MeshPhongMaterial({color:0xa9b0bb,specular:0x777777,shininess:60});
+const GHOST=new THREE.MeshPhongMaterial({color:0xd97757,specular:0x222222,shininess:30,transparent:true,opacity:0.85,depthTest:false,depthWrite:false});
+function makeGhost(d,t,x,y,z0){
+  const g=new THREE.CylinderGeometry(d/2,d/2,t,40,1,false);
+  g.rotateX(Math.PI/2); g.translate(x,y,z0+t/2);
+  const m=new THREE.Mesh(g,GHOST);
+  m.renderOrder=999;
+  m.userData.preview=true;
+  return m;
+}
+
+function insideAny(pt,rings){ for(let i=0;i<rings.length;i++) if(pointInPoly(pt,rings[i])) return true; return false; }
+function makeRegion(outers,inners){
+  return pt => insideAny(pt,outers) && !(inners.length && insideAny(pt,inners));
+}
+function boundaryPts(rings,maxN){
+  let total=0; rings.forEach(r=>total+=r.length);
+  const st=Math.max(1,Math.ceil(total/(maxN||520)));
+  const pts=[];
+  rings.forEach(r=>{ for(let i=0;i<r.length;i+=st) pts.push(r[i]); });
+  return pts;
+}
+function bboxOf(rings){
+  let minx=1e9,maxx=-1e9,miny=1e9,maxy=-1e9;
+  rings.forEach(r=>r.forEach(q=>{
+    if(q.x<minx)minx=q.x; if(q.x>maxx)maxx=q.x;
+    if(q.y<miny)miny=q.y; if(q.y>maxy)maxy=q.y;
+  }));
+  return {minx,maxx,miny,maxy};
+}
+// ближайшая к центру точка, где помещается вставка; иначе — самая толстая
+function bestSpot(region,bpts,bb,needFull,needMin,cx,cy,x0,x1){
+  // needMin ниже может быть понижен, если вставка не влезает нигде
+  x0=(x0===undefined)?bb.minx:Math.max(bb.minx,x0);
+  x1=(x1===undefined)?bb.maxx:Math.min(bb.maxx,x1);
+  cx=cx||0; cy=cy||0;
+  const nx=100,ny=48;
+  const dx=(x1-x0)/nx||1, dy=(bb.maxy-bb.miny)/ny||1;
+  const dist=(x,y)=>{ let d=1e18;
+    for(let i=0;i<bpts.length;i++){ const q=bpts[i],a=q.x-x,b=q.y-y,t=a*a+b*b; if(t<d)d=t; }
+    return Math.sqrt(d); };
+  const toC=(x,y)=>Math.hypot(x-cx,y-cy);
+
+  const all=[]; let maxR=0;
+  for(let i=0;i<=nx;i++) for(let j=0;j<=ny;j++){
+    const x=x0+dx*i, y=bb.miny+dy*j;
+    if(!region({x,y})) continue;
+    const d=dist(x,y);
+    if(d>maxR) maxR=d;
+    all.push({x,y,r:d,c:toC(x,y)});
+  }
+  if(!all.length) return {x:(x0+x1)/2,y:cy,r:0};
+
+  // порог: помещается вставка; если нигде не помещается — берём почти самые
+  // толстые места, но выбираем из них самое близкое к центру, а не крайнее
+  let ok=all.filter(o=>o.r>=needMin);
+  let floor=needMin;
+  if(!ok.length){ floor=maxR*0.82; ok=all.filter(o=>o.r>=floor); }
+  let cmin=1e18; ok.forEach(o=>{ if(o.c<cmin) cmin=o.c; });
+  const band=ok.filter(o=>o.c<=cmin+1.5);
+  let best=band[0];
+  band.forEach(o=>{ if(o.r>best.r) best=o; });
+  needMin=floor;
+
+  const cap=best.c+0.6;
+  let step=Math.max(dx,dy);
+  for(let it=0;it<7;it++){
+    step*=0.55;
+    let moved=true, guard=0;
+    while(moved && guard++<40){
+      moved=false;
+      for(let a=-1;a<=1;a++) for(let b=-1;b<=1;b++){
+        if(!a&&!b) continue;
+        const x=best.x+a*step, y=best.y+b*step;
+        if(x<x0||x>x1) continue;
+        if(toC(x,y)>cap) continue;
+        if(!region({x,y})) continue;
+        const d=dist(x,y);
+        if(d>=needMin && d>best.r){ best={x,y,r:d,c:toC(x,y)}; moved=true; }
+      }
+    }
+  }
+  return best;
+}
+
+function clearanceAt(region,bpts,x,y){
+  if(!region({x,y})) return 0;
+  let d=1e18;
+  for(let i=0;i<bpts.length;i++){ const q=bpts[i],a=q.x-x,b=q.y-y,t=a*a+b*b; if(t<d)d=t; }
+  return Math.sqrt(d);
+}
+function roundRectPoly(w,h,r,seg){
+  seg=seg||16; r=Math.max(0,Math.min(r,Math.min(w,h)/2));
+  const x=w/2, y=h/2, p=[];
+  const arc=(cx,cy,a0)=>{ for(let i=0;i<=seg;i++){ const a=a0+i/seg*Math.PI/2;
+    p.push({x:cx+Math.cos(a)*r, y:cy+Math.sin(a)*r}); } };
+  if(r<1e-6) return [{x:x,y:-y},{x:x,y:y},{x:-x,y:y},{x:-x,y:-y}];
+  arc(x-r,-y+r,-Math.PI/2); arc(x-r,y-r,0); arc(-x+r,y-r,Math.PI/2); arc(-x+r,-y+r,Math.PI);
+  return p;
+}
+function circlePoly(R,n){
+  n=n||72; const a=[];
+  for(let i=0;i<n;i++) a.push({x:Math.cos(i/n*Math.PI*2)*R,y:Math.sin(i/n*Math.PI*2)*R});
+  return a;
+}
+
+/* Честный контур плашки: растеризуем буквы, раздуваем обводкой с круглыми
+   стыками (это настоящий offset, без петель), потом обводим marching squares.
+   Заодно пересекающиеся буквы сливаются в один контур. */
+const MS={1:[['L','B']],2:[['B','R']],3:[['L','R']],4:[['T','R']],
+  5:[['T','R'],['L','B']],6:[['T','B']],7:[['T','L']],8:[['T','L']],
+  9:[['T','B']],10:[['T','L'],['B','R']],11:[['T','R']],12:[['L','R']],
+  13:[['B','R']],14:[['L','B']]};
+let PLATE_CACHE={key:null,val:null};
+function plateOutline(rings, off, solid){
+  const parts=ringsToParts(rings,0);
+  if(!parts.outers.length) return [];
+  const bb=bboxOf(parts.outers);
+  const pad=Math.max(off,0)+1;
+  const wmm=(bb.maxx-bb.minx)+2*pad, hmm=(bb.maxy-bb.miny)+2*pad;
+  const ppm=Math.max(8,Math.min(48, 1600/Math.max(wmm,hmm)));
+  const W=Math.max(8,Math.ceil(wmm*ppm)), H=Math.max(8,Math.ceil(hmm*ppm));
+  if(W*H>4200000) return null;
+  const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+  const ctx=cv.getContext('2d',{willReadFrequently:true});
+  const X=x=>(x-(bb.minx-pad))*ppm, Y=y=>((bb.maxy+pad)-y)*ppm;
+  const path=rs=>{ ctx.beginPath(); rs.forEach(r=>{
+      ctx.moveTo(X(r[0].x),Y(r[0].y));
+      for(let i=1;i<r.length;i++) ctx.lineTo(X(r[i].x),Y(r[i].y));
+      ctx.closePath(); }); };
+  ctx.fillStyle='#000'; ctx.strokeStyle='#000';
+  ctx.lineJoin='round'; ctx.lineCap='round';
+  path(parts.outers); ctx.fill();
+  if(off>0.005){ ctx.lineWidth=2*off*ppm; ctx.stroke(); }
+  if(!solid && parts.inners.length){
+    ctx.globalCompositeOperation='destination-out';
+    path(parts.inners); ctx.fill();
+    if(off>0.005){ ctx.lineWidth=2*off*ppm; ctx.stroke(); }
+    ctx.globalCompositeOperation='source-over';
+  }
+  const px=ctx.getImageData(0,0,W,H).data;
+  const av=(i,j)=> (i<0||j<0||i>=W||j>=H) ? 0 : px[(j*W+i)*4+3];
+  const on=(i,j)=> av(i,j)>128;
+  // точка пересечения ищется интерполяцией по альфе — контур выходит гладким
+  const ip=(a,b)=>{ const d=b-a; return Math.abs(d)<1e-6?0.5:Math.min(1,Math.max(0,(128-a)/d)); };
+  const segs=[]; const pt=(i,j,e)=>{
+    if(e==='T') return {x:i+ip(av(i,j),av(i+1,j)), y:j};
+    if(e==='B') return {x:i+ip(av(i,j+1),av(i+1,j+1)), y:j+1};
+    if(e==='L') return {x:i, y:j+ip(av(i,j),av(i,j+1))};
+    return {x:i+1, y:j+ip(av(i+1,j),av(i+1,j+1))};
+  };
+  for(let j=-1;j<H;j++) for(let i=-1;i<W;i++){
+    const idx=(on(i,j)?8:0)|(on(i+1,j)?4:0)|(on(i+1,j+1)?2:0)|(on(i,j+1)?1:0);
+    let t=MS[idx]; if(!t) continue;
+    if(idx===5||idx===10){
+      const mid=(av(i,j)+av(i+1,j)+av(i+1,j+1)+av(i,j+1))/4;
+      const joined = mid>128;
+      if(idx===5)  t = joined ? [['T','L'],['B','R']] : [['T','R'],['L','B']];
+      else         t = joined ? [['T','R'],['L','B']] : [['T','L'],['B','R']];
+    }
+    t.forEach(pair=>segs.push([pt(i,j,pair[0]),pt(i,j,pair[1])]));
+  }
+  if(!segs.length) return [];
+  const key=p=>Math.round(p.x*4)+'_'+Math.round(p.y*4);
+  const adj=new Map();
+  segs.forEach((sg,si)=>{ [0,1].forEach(e=>{
+    const k=key(sg[e]); if(!adj.has(k)) adj.set(k,[]); adj.get(k).push(si); }); });
+  const used=new Uint8Array(segs.length), out=[];
+  for(let si=0;si<segs.length;si++){
+    if(used[si]) continue;
+    const poly=[]; let cur=si, end=0;
+    while(cur>=0 && !used[cur]){
+      used[cur]=1;
+      const a=segs[cur][end], b=segs[cur][1-end];
+      poly.push(a);
+      const list=adj.get(key(b))||[];
+      let nxt=-1;
+      for(const c of list) if(!used[c]){ nxt=c; end=(key(segs[c][0])===key(b))?0:1; break; }
+      if(nxt<0){ poly.push(b); break; }
+      cur=nxt;
+    }
+    if(poly.length>=8){
+      const a=poly[0], b=poly[poly.length-1];
+      if(Math.hypot(a.x-b.x,a.y-b.y)<=2.0) out.push(poly);
+    }
+  }
+  const toMM=p=>({x:p.x/ppm+(bb.minx-pad), y:(bb.maxy+pad)-p.y/ppm});
+  const smooth=(r,passes)=>{
+    let a=r;
+    for(let s=0;s<passes;s++){
+      const n=a.length, b=new Array(n);
+      for(let i=0;i<n;i++){
+        const p0=a[(i-1+n)%n], p1=a[i], p2=a[(i+1)%n];
+        b[i]={x:(p0.x+2*p1.x+p2.x)/4, y:(p0.y+2*p1.y+p2.y)/4};
+      }
+      a=b;
+    }
+    return a;
+  };
+  return out.map(poly=>{
+    let mm=poly.map(toMM);
+    mm=smooth(mm,2);
+    const tol=0.6/ppm, res=[];
+    let last=null;
+    mm.forEach(p=>{
+      if(last && Math.hypot(p.x-last.x,p.y-last.y)<tol) return;
+      last=p; res.push(p);
+    });
+    return res;
+  }).filter(r=>r.length>=8);
+}
+function plateParts(rings,off,solid,cacheKey){
+  if(PLATE_CACHE.key===cacheKey) return PLATE_CACHE.val;
+  let raw=null;
+  try{ raw=plateOutline(rings,off,solid); }catch(e){ raw=null; }
+  let val;
+  let sane=!!(raw&&raw.length);
+  if(sane){
+    const want=bboxOf(ringsToParts(rings,0).outers), got=bboxOf(raw);
+    const slack=Math.max(off,0)+1.2;
+    if(Math.abs(got.minx-(want.minx-off))>slack||Math.abs(got.maxx-(want.maxx+off))>slack||
+       Math.abs(got.miny-(want.miny-off))>slack||Math.abs(got.maxy-(want.maxy+off))>slack) sane=false;
+  }
+  if(!sane) val=ringsToParts(rings,off);                        // запасной путь
+  else{
+    const items=raw.map(pts=>({pts,area:Math.abs(signedArea(pts))}))
+                   .filter(r=>r.area>0.02).sort((a,b)=>b.area-a.area);
+    items.forEach(it=>{it.parent=-1;});
+    for(let i=0;i<items.length;i++)
+      for(let j=0;j<i;j++)
+        if(pointInPoly(items[i].pts[0],items[j].pts)) items[i].parent=j;
+    const dep=i=>{let d=0,k=i,g=0;while(items[k].parent>=0&&g++<64){d++;k=items[k].parent;}return d;};
+    const outers=[],inners=[];
+    items.forEach((it,i)=>{ (dep(i)%2===0?outers:inners).push(it.pts); });
+    val={outers,inners};
+  }
+  // «Сплошное основание» = вообще без отверстий: кант смыкает устье просвета
+  // у «n», «e», «t» и превращает его в замкнутую дырку — её тоже убираем
+  if(solid && val.inners.length) val={outers:val.outers,inners:[]};
+  val.src = sane?'raster':'simple';
+  PLATE_CACHE={key:cacheKey,val};
+  return val;
+}
+function partsToShapes(pp){
+  const shapes=pp.outers.map(r=>new THREE.Shape(V2(r)));
+  pp.inners.forEach(r=>{
+    const hp=new THREE.Path(V2(r));
+    let tgt=shapes[0];
+    for(const sh of shapes){ let q; try{q=sh.getPoints();}catch(e){q=null;}
+      if(q&&pointInPoly(r[0],q)){ tgt=sh; break; } }
+    if(tgt) tgt.holes.push(hp);
+  });
+  return shapes;
+}
+
+function ringGeo(R,r,h){
+  const sh=new THREE.Shape(); sh.absellipse(0,0,R,R,0,Math.PI*2,false);
+  const hl=new THREE.Path(); hl.absellipse(0,0,r,r,0,Math.PI*2,true); sh.holes.push(hl);
+  return new THREE.ExtrudeGeometry(sh,{depth:h,bevelEnabled:false,steps:1,curveSegments:40});
+}
+function discGeo(R,h){
+  const sh=new THREE.Shape(); sh.absellipse(0,0,R,R,0,Math.PI*2,false);
+  return new THREE.ExtrudeGeometry(sh,{depth:h,bevelEnabled:false,steps:1,curveSegments:40});
+}
+
+function warn(t){ if(buildWarn.indexOf(t)<0) buildWarn.push(t); }
+
+function buildPin(p){
+  if(!logoRings || !THREE_OK) return null;
+  const group=new THREE.Group();
+
+  let minx=1e9,maxx=-1e9,miny=1e9,maxy=-1e9;
+  logoRings.forEach(r=>r.forEach(q=>{
+    if(q.x<minx)minx=q.x; if(q.x>maxx)maxx=q.x;
+    if(q.y<miny)miny=q.y; if(q.y>maxy)maxy=q.y;
+  }));
+  const w=maxx-minx, hh=maxy-miny;
+  const k=p.logo/Math.max(w,hh);
+  const cx=(minx+maxx)/2, cy=(miny+maxy)/2;
+  const scaled=logoRings.map(r=>r.map(q=>({x:(q.x-cx)*k,y:(q.y-cy)*k})));
+
+  const engrave=p.inv;
+  const relief=engrave?Math.min(p.rel,p.h*0.6):p.rel;
+  const mat=new THREE.MeshPhongMaterial({color:0xd8dade,specular:0xffffff,shininess:110});
+  const logoMat=new THREE.MeshPhongMaterial({color:0xe8eaee,specular:0xffffff,shininess:140});
+  const off=Math.max(0.15,p.grow/2+p.ring);
+  const LAY=(TECH[p.tech]||TECH.fdm02).layer;
+  const minTop=Math.max(p.fwall,LAY);                 // не тоньше одного слоя
+  const wantIn = p.mount!=='none' && p.seat!=='flat';
+  const thick = (p.autoth && wantIn) ? Math.max(p.h, p.pdep+minTop) : p.h;
+  if(thick>p.h+0.01) warn(t('w.thickUp',p.h.toFixed(1),thick.toFixed(1),minTop.toFixed(2)));
+  const bodyH=engrave?Math.max(0.4,thick-relief):thick;
+  const EX=(sh,d)=>new THREE.ExtrudeGeometry(sh,{depth:d,bevelEnabled:false,steps:1,curveSegments:36});
+
+  const ghosts=[];
+  const lidded = p.lid>0.05 && p.mount!=='none';
+  const noPad = p.mount==='inset';
+  const kind = (p.mount==='auto'||noPad) ? 'pocket' : p.mount;
+
+  // область спинки, куда можно сажать вставку
+  const plateKey = p.mode==='disc' ? null
+    : [p.logo,p.ring,p.grow,p.solid,logoName].join('|');
+  const rw=w*k+2*p.marg, rh=hh*k+2*p.marg;
+  const parts = p.mode==='disc'
+    ? {outers:[circlePoly(p.D/2)], inners:[]}
+    : p.mode==='rect'
+    ? {outers:[roundRectPoly(rw,rh,p.rad)], inners:[]}
+    : plateParts(scaled,off,p.solid,plateKey);
+  const innerHoles = (p.mode==='disc'||p.solid) ? [] : parts.inners;
+  const region = makeRegion(parts.outers, innerHoles);
+  const bpts = boundaryPts(parts.outers.concat(innerHoles),520);
+  const bb2 = bboxOf(parts.outers);
+
+  const needFull=p.pd/2+p.wall, needMin=p.pd/2+0.35;
+  const cX=0, cY=0; // лого отцентровано по построению — это и есть центр пина
+  let spots;
+  if(kind==='none') spots=[];
+  else if(kind==='boss2'){
+    const q=(bb2.maxx-bb2.minx)/4;
+    spots=[bestSpot(region,bpts,bb2,needFull,needMin,cX-q,cY,bb2.minx,cX),
+           bestSpot(region,bpts,bb2,needFull,needMin,cX+q,cY,cX,bb2.maxx)];
+  } else {
+    // ищем только в центральной зоне, чтобы крепление не уезжало в хвост слова
+    const z=Math.max(0.5,p.zone);
+    spots=[bestSpot(region,bpts,bb2,needFull,needMin,cX,cY,cX-z,cX+z)];
+  }
+
+  if(p.ox||p.oy) spots=spots.map(sp=>{
+    const x=sp.x+p.ox, y=sp.y+p.oy;
+    return {x,y,r:clearanceAt(region,bpts,x,y)};
+  });
+
+  const flat = p.seat==='flat';
+  const padD = Math.max(p.pd+2*(flat?Math.min(p.wall,0.8):p.wall), (kind==='boss'||kind==='boss2')?p.bd:0);
+  const allFit = spots.length>0 && spots.every(s=>s.r>=p.pd/2+0.35);
+  const deepAvail = Math.max(0, bodyH-minTop);
+  const cav = (flat||!allFit) ? 0 : Math.min(p.pdep, deepAvail);
+  const internalVoid = !flat && lidded && allFit && spots.length===1 && deepAvail>=p.pdep+p.lid;
+  // встык: площадка нужна, только если спинка у́же диска
+  const padH = (kind==='none'||noPad) ? 0
+    : flat ? (allFit ? 0 : Math.max(0.3,p.padh))
+    : (internalVoid ? 0 : Math.max(0, p.pdep-cav));
+  const padLid = (noPad||flat||!lidded||internalVoid||kind==='none') ? 0 : p.lid;
+  const off0 = spots.length ? Math.hypot(spots[0].x,spots[0].y) : 0;
+
+  if(p.mode==='disc'){
+    group.add(new THREE.Mesh(
+      baseLathe(p.D,bodyH,engrave?0:p.ch,engrave?0:p.dome,p.pd,internalVoid?0:cav), mat));
+    if(internalVoid){
+      group.add(new THREE.Mesh(voidCyl(p.pd/2,p.pdep,0,0,p.lid+p.pdep/2),mat));
+      ghosts.push([0,0,p.lid]);
+    }
+  } else {
+    if(p.mode==='cut' && engrave && p.ring<1.2) warn(t('w.engrave',p.ring.toFixed(1)));
+    const plate=()=>partsToShapes(parts);
+    if(internalVoid){
+      group.add(new THREE.Mesh(EX(plate(),bodyH),mat));
+      group.add(new THREE.Mesh(voidCyl(p.pd/2,p.pdep,spots[0].x,spots[0].y,p.lid+p.pdep/2),mat));
+      ghosts.push([spots[0].x,spots[0].y,p.lid]);
+    } else if(cav>0.05){
+      const low=plate();
+      spots.forEach(sp=>{
+        const h=new THREE.Path();
+        h.absellipse(sp.x,sp.y,p.pd/2,p.pd/2,0,Math.PI*2,true);
+        let tgt=low[0];
+        for(const shp of low){ let pts; try{pts=shp.getPoints();}catch(e){pts=null;}
+          if(pts&&pointInPoly({x:sp.x,y:sp.y},pts)){ tgt=shp; break; } }
+        if(tgt) tgt.holes.push(h);
+      });
+      group.add(new THREE.Mesh(EX(low,cav),mat));
+      const g=EX(plate(),bodyH-cav); g.translate(0,0,cav);
+      group.add(new THREE.Mesh(g,mat));
+    } else {
+      group.add(new THREE.Mesh(EX(plate(),bodyH),mat));
+    }
+  }
+
+  if(padH>0.05 || padLid>0.005){
+    spots.forEach(sp=>{
+      if(padH>0.05){
+        const g = flat ? discGeo(padD/2,padH) : ringGeo(padD/2,p.pd/2,padH);
+        g.translate(sp.x,sp.y,-padH);
+        group.add(new THREE.Mesh(g,PADMAT));
+      }
+      if(padLid>0.005){
+        const g=discGeo(padD/2,padLid); g.translate(sp.x,sp.y,-padH-padLid);
+        group.add(new THREE.Mesh(g,PADMAT));
+      }
+      ghosts.push([sp.x,sp.y,flat?(-padH-p.pdep):-padH]);
+    });
+    warn(t('w.padHead',flat)+padD.toFixed(1)+t('w.padBack')+(flat?t('w.padButt'):'')+(cav>0.05?t('w.padSunk',cav.toFixed(1),(padH+padLid).toFixed(1)):'')+
+      (allFit?'':(flat?t('w.padNarrow',p.pd):t('w.padNoFit',p.pd,(spots[0]?(spots[0].r*2).toFixed(1):'0'))))+
+      t('w.padTail'));
+  } else if(cav>0.05 && !internalVoid){
+    spots.forEach(sp=>ghosts.push([sp.x,sp.y,0]));
+  } else if(flat && kind!=='none'){
+    spots.forEach(sp=>ghosts.push([sp.x,sp.y,-p.pdep]));
+  } else if(noPad && kind!=='none'){
+    spots.forEach(sp=>ghosts.push([sp.x,sp.y,cav-p.pdep]));
+  }
+  if(noPad && kind!=='none'){
+    if(!allFit) warn(t('w.noFit',p.pd));
+    else if(p.pdep-cav>0.05) warn(t('w.proud',(p.pdep-cav).toFixed(1),(p.pdep+p.fwall).toFixed(1)));
+  }
+  if(kind!=='none' && minTop<0.5)
+    warn(t('w.fwall',p.fwall.toFixed(1)));
+  if(padH>0.05 && p.wall<0.5)
+    warn(t('w.wall',p.wall.toFixed(1)));
+  if(off0>1.5 && kind!=='none' && kind!=='boss2')
+    warn(t('w.offCenter',off0.toFixed(1)));
+
+  let count=0;
+  if(engrave){
+    const parts=ringsToParts(scaled,p.grow/2);
+    count=parts.outers.length+parts.inners.length;
+    const face = p.mode==='disc' ? [discShape(p.D/2)]
+                                 : partsToShapes({outers:parts.outers,inners:[]});
+    attachHoles(face,parts.outers);
+    const all=face.concat(parts.inners.map(r=>new THREE.Shape(V2(r))));
+    const g=EX(all,relief);
+    g.translate(0,0,bodyH);
+    group.add(new THREE.Mesh(g,mat));
+  } else {
+    const res=ringsToShapes(scaled,p.grow/2);
+    count=res.count;
+    if(!res.shapes.length) return null;
+    const bev=Math.min(p.bev,relief*0.4);
+    const lg=new THREE.ExtrudeGeometry(res.shapes,{
+      depth:relief-(bev>0?bev:0), bevelEnabled:bev>0,
+      bevelThickness:bev, bevelSize:bev, bevelOffset:0, bevelSegments:2,
+      steps:1, curveSegments:1});
+    lg.translate(0,0,bodyH-0.001+(p.dome>0&&p.mode==='disc'?p.dome*0.35:0));
+    group.add(new THREE.Mesh(lg,logoMat));
+    if(p.draft>0.005){
+      const sk=ringsToShapes(scaled,p.grow/2+p.draft).shapes;
+      const sg=new THREE.ExtrudeGeometry(sk,{depth:Math.min(relief*0.45,0.25),bevelEnabled:false,steps:1,curveSegments:1});
+      sg.translate(0,0,bodyH-0.001);
+      group.add(new THREE.Mesh(sg,logoMat));
+    }
+  }
+
+  ghosts.forEach(gp=>group.add(makeGhost(Math.max(1,p.pd-0.25),p.pdep,gp[0],gp[1],gp[2])));
+
+  group.userData.meta={
+    size: p.mode==='disc' ? t('size.disc',p.D.toFixed(1))
+      : p.mode==='rect' ? t('size.rect',rw.toFixed(1),rh.toFixed(1))
+      : t('size.rect',(w*k).toFixed(1),(hh*k).toFixed(1)),
+    totalH: (engrave ? thick : (thick+relief+(p.mode==='disc'?p.dome:0))) + padH + padLid,
+    kind: kind, thick: thick,
+    plateSrc: (p.mode==='cut'?(parts.src||'?'):''),
+    spotTxt: spots.length ? t('mt.spot',spots.map(sp=>sp.x.toFixed(1)+'/'+sp.y.toFixed(1)).join(t('mt.and')),(spots[0].r*2).toFixed(1)) : '',
+    mountText: kind==='none' ? t('mt.flatBack')
+      : noPad ? (p.pdep-cav>0.05?t('mt.socketProud',cav.toFixed(1),(p.pdep-cav).toFixed(1)):t('mt.sunk'))
+      : flat ? (padH>0.05?t('mt.padGlue',padH.toFixed(1)):t('mt.glueBack'))
+        : (padH+padLid>0.05 ? t('mt.sunkOut',cav.toFixed(1),(padH+padLid).toFixed(1))
+        : (internalVoid?t('mt.underLid'):t('mt.inBody'))),
+    rings: count, params: p
+  };
+  return group;
+}
+
+/* ============ сцена ============ */
+let renderer,scene,camera,pivot,current,raf;
+function initScene(){
+  const canvas=$('view');
+  renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true,preserveDrawingBuffer:false});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  scene=new THREE.Scene();
+  camera=new THREE.PerspectiveCamera(35,2,0.1,500);
+  camera.position.set(0,-46,30);
+  camera.up.set(0,0,1);
+  camera.lookAt(0,0,0);
+  pivot=new THREE.Group();
+  scene.add(pivot);
+  scene.add(new THREE.AmbientLight(0xffffff,0.45));
+  const l1=new THREE.DirectionalLight(0xffffff,0.85); l1.position.set(-20,-30,40); scene.add(l1);
+  const l2=new THREE.DirectionalLight(0xbfd4ff,0.5); l2.position.set(30,-10,20); scene.add(l2);
+  const l3=new THREE.DirectionalLight(0xffe9c9,0.45); l3.position.set(10,30,-15); scene.add(l3);
+  resize();
+  window.addEventListener('resize',resize);
+  bindDrag(canvas);
+  loop();
+}
+function resize(){
+  const c=$('view');
+  const w=c.clientWidth||600, h=c.clientHeight||440;
+  renderer.setSize(w,h,false);
+  camera.aspect=w/h; camera.updateProjectionMatrix();
+}
+let rot={x:-0.55,z:0}, dist=46, dragging=false,last=null,autoT=0;
+function bindDrag(c){
+  const down=e=>{dragging=true;last=pt(e);c.setPointerCapture&&c.setPointerCapture(e.pointerId);};
+  const move=e=>{
+    if(!dragging)return;
+    const p=pt(e);
+    rot.z+=(p.x-last.x)*0.01; rot.x+=(p.y-last.y)*0.01;
+    rot.x=clamp(rot.x,-1.55,1.55); last=p; autoT=0;
+  };
+  const up=()=>{dragging=false;};
+  c.addEventListener('pointerdown',down);
+  c.addEventListener('pointermove',move);
+  c.addEventListener('pointerup',up);
+  c.addEventListener('pointercancel',up);
+  c.addEventListener('wheel',e=>{e.preventDefault();dist=clamp(dist*(1+Math.sign(e.deltaY)*0.09),14,160);},{passive:false});
+  function pt(e){return{x:e.clientX,y:e.clientY};}
+}
+function loop(){
+  raf=requestAnimationFrame(loop);
+  if(!dragging){ autoT+=0.0035; }
+  if(typeof GHOST!=='undefined'){
+    const back=rot.x>0.15;
+    const want=back?0.85:0.30;
+    GHOST.opacity += (want-GHOST.opacity)*0.18;
+    // со спинки — рентген сквозь пластик, с лица — вставка прячется в теле
+    const wantTest=!back;
+    if(GHOST.depthTest!==wantTest){ GHOST.depthTest=wantTest; GHOST.needsUpdate=true; }
+  }
+  pivot.rotation.set(0,0,rot.z+Math.sin(autoT)*0.25);
+  const r=dist;
+  camera.position.set(Math.sin(0)*r, -Math.cos(rot.x)*r, Math.sin(-rot.x)*r+6);
+  camera.lookAt(0,0,2);
+  renderer.render(scene,camera);
+}
+
+function refresh(){
+  if(!THREE_OK) return;
+  const g=build();
+  if(!g) return;
+  if(current){ pivot.remove(current); disposeGroup(current); }
+  current=g; pivot.add(g);
+  const m=g.userData.meta;
+  let tris=0;
+  g.traverse(o=>{ if(o.isMesh && !o.userData.preview){ const pos=o.geometry.attributes.position; tris += (o.geometry.index?o.geometry.index.count:pos.count)/3; }});
+  $('s-size').textContent=m.size;
+  $('s-tris').textContent=t('sb.tris',nfmt(tris));
+  $('s-rings').textContent=t('sb.rings',m.rings);
+  const mp=m.params;
+  $('s-mount').textContent = mp.mount==='none' ? t('mt.flatBack')
+    : insLabel(mp.insert)+' · '+m.mountText+(m.spotTxt?' · '+m.spotTxt:'')+(m.plateSrc?t('sb.outline',t('src.'+m.plateSrc)):'');
+  $('s-warn').textContent = buildWarn.length ? '! '+buildWarn[0] : '';
+  $('st-size').textContent=m.size;
+  $('st-h').textContent=m.totalH.toFixed(2)+t('u.mmSuffix')+(m.params&&m.thick&&m.thick>m.params.h+0.01?t('st.hBody',m.thick.toFixed(1)):'');
+  $('st-vol').textContent=approxVolume(g).toFixed(2)+t('u.cm3');
+  $('dl').disabled=false;
+  showAnalysis(m.params);
+  const span=m.plate?110:Math.max(m.params.D||30,m.params.logo)*1.9;
+  if(lastSpan!==span){ dist=span; lastSpan=span; }
+}
+let lastSpan=0;
+
+function showAnalysis(p){
+  if(!analysis||!logoRings){ return; }
+  const T=TECH[p.tech]||TECH.fdm02;
+  let minx=1e9,maxx=-1e9,miny=1e9,maxy=-1e9;
+  logoRings.forEach(r=>r.forEach(q=>{
+    if(q.x<minx)minx=q.x; if(q.x>maxx)maxx=q.x;
+    if(q.y<miny)miny=q.y; if(q.y>maxy)maxy=q.y;
+  }));
+  const k=p.logo/Math.max(maxx-minx,maxy-miny);
+  const stroke=Math.max(0,analysis.stroke*k+p.grow);
+  const gap=Math.max(0,analysis.gap*k-p.grow);
+  const mark=(v,warn,bad)=>v<bad?'#e5484d':(v<warn?'#e3a341':'');
+  const st=$('st-stroke'), sg=$('st-gap'), sr=$('st-ratio');
+  st.textContent=stroke.toFixed(2)+t('u.mmSuffix')+(T.wall?' ('+(stroke/T.wall).toFixed(1)+(LANG==='en'?' lines)':' линии)'):'');
+  st.style.color=mark(stroke,T.stroke[0],T.stroke[1])||'';
+  sg.textContent=gap.toFixed(2)+t('u.mmSuffix'); sg.style.color=mark(gap,T.gap[0],T.gap[1])||'';
+  const ratio=p.rel/Math.max(stroke,0.01);
+  sr.textContent=ratio.toFixed(2)+'×'; sr.style.color=ratio>T.ratio?'#e3a341':'';
+  drawMap(analysis,k,logoRings,T);
+
+  const tips=[];
+  if(stroke<T.stroke[1])
+    tips.push(t('tip.strokeThin',T.stroke[1].toFixed(2),(p.logo*T.stroke[0]/Math.max(stroke,0.01)).toFixed(0),(T.stroke[0]-stroke).toFixed(2)));
+  else if(stroke<T.stroke[0])
+    tips.push(t('tip.strokeEdge',(T.stroke[0]-stroke).toFixed(2)));
+  if(T.wall){
+    const n=Math.max(2,Math.round(stroke/T.wall));
+    const target=n*T.wall, delta=target-stroke;
+    if(Math.abs(delta)>0.03)
+      tips.push(t('tip.perims',n,target.toFixed(2),(delta>0?'+':'')+(p.grow+delta).toFixed(2)));
+    const layers=Math.round(p.rel/T.layer);
+    tips.push(t('tip.layers',p.rel.toFixed(2),layers,T.layer,layers<4));
+  }
+  if(gap<T.gap[1])
+    tips.push(t('tip.gapThin',T.gap[1].toFixed(2)));
+  else if(gap<T.gap[0])
+    tips.push(t('tip.gapTight'));
+  if(ratio>T.ratio)
+    tips.push(t('tip.ratio',T.ratio,(stroke*T.ratio*0.8).toFixed(2)));
+  if(p.tech!=='msla' && !p.inv)
+    tips.push(t('tip.seam'));
+  if(p.tech==='msla' && p.draft<0.03)
+    tips.push(t('tip.draft'));
+  const all=buildWarn.map(w=>'<span style="color:#e5484d">! '+w+'</span>').concat(tips);
+  if(!all.length) all.push(t('tip.ok'));
+  $('advice').innerHTML=all.map(w=>'• '+w).join('<br>');
+}
+
+function disposeGroup(g){ g.traverse(o=>{ if(o.isMesh){o.geometry.dispose();} }); }
+
+function approxVolume(g){
+  let v=0;
+  g.traverse(o=>{
+    if(!o.isMesh || o.userData.preview) return;
+    o.updateMatrixWorld(true);
+    const geo=o.geometry, pos=geo.attributes.position, idx=geo.index;
+    const a=new THREE.Vector3(),b=new THREE.Vector3(),c=new THREE.Vector3();
+    const n=idx?idx.count:pos.count;
+    for(let i=0;i<n;i+=3){
+      const i0=idx?idx.getX(i):i, i1=idx?idx.getX(i+1):i+1, i2=idx?idx.getX(i+2):i+2;
+      a.fromBufferAttribute(pos,i0).applyMatrix4(o.matrixWorld);
+      b.fromBufferAttribute(pos,i1).applyMatrix4(o.matrixWorld);
+      c.fromBufferAttribute(pos,i2).applyMatrix4(o.matrixWorld);
+      v += a.dot(b.clone().cross(c))/6;
+    }
+  });
+  return Math.abs(v)/1000;
+}
+
+/* ============ STL + ZIP ============ */
+function toBinarySTL(group){
+  const tris=[];
+  const a=new THREE.Vector3(),b=new THREE.Vector3(),c=new THREE.Vector3();
+  group.traverse(o=>{
+    if(!o.isMesh || o.userData.preview) return;
+    o.updateMatrixWorld(true);
+    const geo=o.geometry,pos=geo.attributes.position,idx=geo.index;
+    const n=idx?idx.count:pos.count;
+    for(let i=0;i<n;i+=3){
+      const i0=idx?idx.getX(i):i,i1=idx?idx.getX(i+1):i+1,i2=idx?idx.getX(i+2):i+2;
+      a.fromBufferAttribute(pos,i0).applyMatrix4(o.matrixWorld);
+      b.fromBufferAttribute(pos,i1).applyMatrix4(o.matrixWorld);
+      c.fromBufferAttribute(pos,i2).applyMatrix4(o.matrixWorld);
+      tris.push(a.x,a.y,a.z,b.x,b.y,b.z,c.x,c.y,c.z);
+    }
+  });
+  const count=tris.length/9;
+  const buf=new ArrayBuffer(84+count*50);
+  const dv=new DataView(buf);
+  for(let i=0;i<80;i++) dv.setUint8(i,32);
+  dv.setUint32(80,count,true);
+  let off=84;
+  const ab=new THREE.Vector3(),ac=new THREE.Vector3(),nn=new THREE.Vector3();
+  for(let t=0;t<count;t++){
+    const o=t*9;
+    a.set(tris[o],tris[o+1],tris[o+2]);
+    b.set(tris[o+3],tris[o+4],tris[o+5]);
+    c.set(tris[o+6],tris[o+7],tris[o+8]);
+    ab.subVectors(b,a); ac.subVectors(c,a); nn.crossVectors(ab,ac);
+    if(nn.lengthSq()>0) nn.normalize();
+    dv.setFloat32(off,nn.x,true);dv.setFloat32(off+4,nn.y,true);dv.setFloat32(off+8,nn.z,true);
+    for(let k=0;k<9;k++) dv.setFloat32(off+12+k*4,tris[o+k],true);
+    dv.setUint16(off+48,0,true);
+    off+=50;
+  }
+  return new Uint8Array(buf);
+}
+
+const CRC_TABLE=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
+function crc32(u8){let c=0xFFFFFFFF;for(let i=0;i<u8.length;i++)c=CRC_TABLE[(c^u8[i])&0xFF]^(c>>>8);return (c^0xFFFFFFFF)>>>0;}
+function makeZip(files){
+  const enc=new TextEncoder();
+  const chunks=[],central=[];
+  let offset=0;
+  const dosTime=0x8000, dosDate=0x5800;
+  const canZ = (typeof pako!=='undefined' && pako.deflateRaw);
+  for(const f of files){
+    const name=enc.encode(f.name), raw=f.data;
+    const crc=crc32(raw);
+    let data=raw, method=0;
+    if(canZ && raw.length>2048){
+      try{ const d=pako.deflateRaw(raw,{level:6}); if(d.length<raw.length){ data=d; method=8; } }catch(e){}
+    }
+    const lh=new Uint8Array(30+name.length);
+    const dv=new DataView(lh.buffer);
+    dv.setUint32(0,0x04034b50,true); dv.setUint16(4,20,true); dv.setUint16(6,0x0800,true);
+    dv.setUint16(8,method,true); dv.setUint16(10,dosTime,true); dv.setUint16(12,dosDate,true);
+    dv.setUint32(14,crc,true); dv.setUint32(18,data.length,true); dv.setUint32(22,raw.length,true);
+    dv.setUint16(26,name.length,true); dv.setUint16(28,0,true);
+    lh.set(name,30);
+    chunks.push(lh,data);
+    const cd=new Uint8Array(46+name.length);
+    const cv=new DataView(cd.buffer);
+    cv.setUint32(0,0x02014b50,true); cv.setUint16(4,20,true); cv.setUint16(6,20,true);
+    cv.setUint16(8,0x0800,true); cv.setUint16(10,method,true); cv.setUint16(12,dosTime,true); cv.setUint16(14,dosDate,true);
+    cv.setUint32(16,crc,true); cv.setUint32(20,data.length,true); cv.setUint32(24,raw.length,true);
+    cv.setUint16(28,name.length,true); cv.setUint32(42,offset,true);
+    cd.set(name,46);
+    central.push(cd);
+    offset+=lh.length+data.length;
+  }
+  let cdSize=0; central.forEach(c=>cdSize+=c.length);
+  const end=new Uint8Array(22);
+  const ev=new DataView(end.buffer);
+  ev.setUint32(0,0x06054b50,true);
+  ev.setUint16(8,files.length,true); ev.setUint16(10,files.length,true);
+  ev.setUint32(12,cdSize,true); ev.setUint32(16,offset,true);
+  const all=[...chunks,...central,end];
+  let total=0; all.forEach(u=>total+=u.length);
+  const out=new Uint8Array(total); let o=0;
+  all.forEach(u=>{out.set(u,o);o+=u.length;});
+  return out;
+}
+
+function insLabel(key){
+  const v=INS[key];
+  return (v && v.lbl) ? t(v.lbl) : t('ins.lbl.custom');
+}
+
+function guideText(p,meta){
+  const ins=INS[p.insert]||{};
+  return t('guide', p, meta, {label:insLabel(p.insert), mag:!!ins.mag}, logoName);
+}
+
+const PRINTERS={
+  k1c   :{name:'Creality K1C',      bed:[220,220], noz:0.4, pid:'Creality K1C 0.4 nozzle'},
+  k1max :{name:'Creality K1 Max',   bed:[300,300], noz:0.4, pid:'Creality K1 Max 0.4 nozzle'},
+  ender3:{name:'Creality Ender-3',  bed:[220,220], noz:0.4, pid:'Creality Ender-3 0.4 nozzle'},
+  p1s   :{name:'Bambu P1S',         bed:[256,256], noz:0.4, pid:'Bambu Lab P1S 0.4 nozzle'},
+  x1c   :{name:'Bambu X1C',         bed:[256,256], noz:0.4, pid:'Bambu Lab X1 Carbon 0.4 nozzle'},
+  mk4   :{name:'Prusa MK4',         bed:[250,210], noz:0.4, pid:'Prusa MK4 0.4 nozzle'},
+  gen02 :{i18n:'printer.gen02', bed:[220,220], noz:0.2, pid:''},
+  gen04 :{i18n:'printer.gen04', bed:[220,220], noz:0.4, pid:''}
+};
+
+function meshXML(group,bed){
+  const V=[],T=[],map=new Map();
+  const a=new THREE.Vector3();
+  let minz=1e9,minx=1e9,miny=1e9,maxx=-1e9,maxy=-1e9;
+  const tri=[];
+  group.traverse(o=>{
+    if(!o.isMesh||o.userData.preview) return;
+    o.updateMatrixWorld(true);
+    const g=o.geometry,pos=g.attributes.position,idx=g.index;
+    const n=idx?idx.count:pos.count;
+    for(let i=0;i<n;i++){
+      const k=idx?idx.getX(i):i;
+      a.fromBufferAttribute(pos,k).applyMatrix4(o.matrixWorld);
+      tri.push(a.x,a.y,a.z);
+      if(a.z<minz)minz=a.z; if(a.x<minx)minx=a.x; if(a.x>maxx)maxx=a.x;
+      if(a.y<miny)miny=a.y; if(a.y>maxy)maxy=a.y;
+    }
+  });
+  const r=v=>Math.round(v*1000)/1000;
+  const idxOf=(x,y,z)=>{
+    const k=x+'|'+y+'|'+z;
+    let i=map.get(k);
+    if(i===undefined){ i=V.length; map.set(k,i); V.push(x+' '+y+' '+z); }
+    return i;
+  };
+  for(let i=0;i<tri.length;i+=9){
+    const p=[];
+    for(let v=0;v<3;v++)
+      p.push(idxOf(r(tri[i+v*3]-minx), r(tri[i+v*3+1]-miny), r(tri[i+v*3+2]-minz)));
+    if(p[0]!==p[1]&&p[1]!==p[2]&&p[0]!==p[2]) T.push(p);
+  }
+  const cx=(bed[0]-(maxx-minx))/2, cy=(bed[1]-(maxy-miny))/2;
+  const head='<?xml version="1.0" encoding="UTF-8"?>\n'+
+    '<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">\n'+
+    '<resources><object id="1" type="model"><mesh><vertices>\n';
+  const verts=V.map(v=>{const c=v.split(' ');return '<vertex x="'+c[0]+'" y="'+c[1]+'" z="'+c[2]+'"/>';}).join('\n');
+  const tris='\n</vertices><triangles>\n'+T.map(t=>'<triangle v1="'+t[0]+'" v2="'+t[1]+'" v3="'+t[2]+'"/>').join('\n');
+  const tail='\n</triangles></mesh></object></resources>\n'+
+    '<build><item objectid="1" transform="1 0 0 0 1 0 0 0 1 '+r(cx)+' '+r(cy)+' 0"/></build>\n</model>\n';
+  return head+verts+tris+tail;
+}
+
+function orcaConfig(p,pr){
+  const nz=pr.noz, w=(x)=>String(x);
+  const ow=Math.min(nz, nz===0.2?0.22:0.40), iw=nz===0.2?0.25:0.45;
+  const lay=nz===0.2?'0.08':'0.08';
+  const c={
+    version:'1.9.0.0',
+    printer_settings_id:pr.pid, print_settings_id:'PinForge fine '+nz,
+    filament_settings_id:['PinForge PLA'], filament_type:['PLA'],
+    nozzle_diameter:[String(nz)],
+    layer_height:lay, initial_layer_print_height:nz===0.2?'0.12':'0.2',
+    line_width:String(nz===0.2?0.25:0.42),
+    outer_wall_line_width:String(ow), inner_wall_line_width:String(iw),
+    top_surface_line_width:String(ow), initial_layer_line_width:String(nz===0.2?0.28:0.5),
+    wall_loops:'3', wall_generator:'arachne',
+    top_shell_layers:'8', bottom_shell_layers:'5',
+    sparse_infill_density:'25%', sparse_infill_pattern:'gyroid',
+    infill_wall_overlap:'15%', gap_fill_target:'nowhere', filter_out_gap_fill:'0.2',
+    slice_closing_radius:'0.01', resolution:'0.005',
+    xy_hole_compensation:'0.05', xy_contour_compensation:'-0.05',
+    elefant_foot_compensation:'0.2', precise_outer_wall:'1',
+    only_one_wall_top:'0', reduce_crossing_wall:'1',
+    ironing_type:'top', ironing_flow:'10%', ironing_speed:'30', ironing_spacing:'0.12',
+    seam_position:'aligned', seam_slope_type:'external', has_scarf_joint_seam:'1', seam_slope_min_length:'10',
+    outer_wall_speed:'50', inner_wall_speed:'100',
+    small_perimeter_speed:'40', small_perimeter_threshold:'2',
+    top_surface_speed:'60', gap_infill_speed:'80',
+    sparse_infill_speed:'200', internal_solid_infill_speed:'150', initial_layer_speed:'25',
+    default_acceleration:'3000', outer_wall_acceleration:'1500', inner_wall_acceleration:'2000',
+    top_surface_acceleration:'1500', initial_layer_acceleration:'500',
+    fan_min_speed:['100'], fan_max_speed:['100'], slow_down_layer_time:['15'],
+    close_fan_the_first_x_layers:['1'], fan_cooling_layer_time:['60'],
+    enable_support:'0', brim_type:'no_brim'
+  };
+  if(p.inv) c.brim_type='outer_only';
+  return c;
+}
+
+function make3MF(group,p,pr){
+  const enc=new TextEncoder();
+  const ct='<?xml version="1.0" encoding="UTF-8"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'+
+    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'+
+    '<Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/>'+
+    '<Default Extension="config" ContentType="application/vnd.ms-package.3dmanufacturing-config+xml"/>'+
+    '<Default Extension="png" ContentType="image/png"/></Types>';
+  const rels='<?xml version="1.0" encoding="UTF-8"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+    '<Relationship Target="/3D/3dmodel.model" Id="rel-1" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>';
+  const ms='<?xml version="1.0" encoding="UTF-8"?>\n<config><object id="1">'+
+    '<metadata key="name" value="'+logoName+'"/><metadata key="extruder" value="1"/>'+
+    '<part id="1" subtype="normal_part"><metadata key="name" value="'+logoName+'"/></part></object></config>';
+  const si='<?xml version="1.0" encoding="UTF-8"?>\n<config><plate><metadata key="index" value="1"/></plate></config>';
+  return makeZip([
+    {name:'[Content_Types].xml', data:enc.encode(ct)},
+    {name:'_rels/.rels', data:enc.encode(rels)},
+    {name:'3D/3dmodel.model', data:enc.encode(meshXML(group,pr.bed))},
+    {name:'Metadata/model_settings.config', data:enc.encode(ms)},
+    {name:'Metadata/slice_info.config', data:enc.encode(si)},
+    {name:'Metadata/project_settings.config', data:enc.encode(JSON.stringify(orcaConfig(p,pr),null,2))}
+  ]);
+}
+
+async function download(){
+  const g=current; if(!g) return;
+  const p=readParams();
+  if($('fmt').value==='3mf'){
+    const pr=PRINTERS[$('printer').value]||PRINTERS.k1c;
+    let zip;
+    try{ zip=make3MF(g,p,pr); }catch(e){ const em=e.message; say(()=>t('msg.mfFail',em)); return; }
+    await saveBlob(new Blob([zip],{type:'application/vnd.ms-package.3dmanufacturing-3dmodel+xml'}),
+                   logoName+'-pin.3mf');
+    return;
+  }
+  const stl=toBinarySTL(g);
+  const txt=new TextEncoder().encode(guideText(p,g.userData.meta));
+  const zip=makeZip([
+    {name:`${logoName}-pin.stl`,data:stl},
+    {name:'print-notes.txt',data:txt}
+  ]);
+  const filename=`${logoName}-pin-${p.mode==='disc'?p.D+'mm':'contour'}.zip`;
+  await saveBlob(new Blob([zip],{type:'application/zip'}),filename);
+}
+
+/* Опубликованная страница отдаёт файл через хост, а там белый список
+   расширений: .3mf в него не входит, поэтому на отказ заворачиваем в zip. */
+async function saveViaHost(dl,blob,filename){
+  await dl.save({filename,data:blob});
+}
+
+async function saveBlob(blob,filename){
+  let dl=null;
+  try{ dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null; }
+  catch(e){ dl=null; }
+
+  if(dl){
+    try{
+      await saveViaHost(dl,blob,filename);
+      say(()=>t('msg.saved'),true);
+      return;
+    }catch(err){
+      const code = err && err.code;
+      if(code==='declined'){ say(()=>t('msg.cancelled')); return; }
+      if(code==='rate_limited'){ say(()=>t('msg.rate')); return; }
+      if(code==='rejected_extension' || code==='extension_not_enabled'){
+        try{
+          const raw=new Uint8Array(await blob.arrayBuffer());
+          const zip=makeZip([{name:filename,data:raw}]);
+          const zipName=filename.replace(/\.[^.]+$/,'')+'-3mf.zip';
+          await saveViaHost(dl,new Blob([zip],{type:'application/zip'}),zipName);
+          say(()=>t('msg.zipWrap',zipName),true);
+          return;
+        }catch(e2){
+          if(e2 && e2.code==='declined'){ say(()=>t('msg.cancelled')); return; }
+          const c2=(e2&&e2.code)||null; say(()=>t('msg.saveFail',c2||t('err.code')));
+          return;
+        }
+      }
+      say(()=>t('msg.saveFallback',code||t('err.code')));
+    }
+  }
+
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=filename; document.body.appendChild(a); a.click();
+  setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1500);
+}
+
+/* ============ UI ============ */
+function markLoaded(name){
+  const d=$('drop');
+  if(!d) return;
+  logoFileName = name || '';
+  d.classList.add('loaded');
+  $('drop-title').textContent = logoFileName || t('drop.done');
+  $('drop-sub').textContent = t('drop.replace');
+}
+
+function loadSVGText(text,name){
+  try{
+    logoRings=parseSVGtoRings(text);
+    if(name) logoName=name.replace(/\.svg$/i,'').replace(/[^\w\-]+/g,'-').slice(0,40)||'pin';
+    markLoaded(name);
+    try{ analysis=analyzeLogo(logoRings); }catch(e){ analysis=null; }
+    const nr=logoRings.length; say(()=>t('msg.parsed',nr),true);
+    refresh();
+  }catch(e){
+    say(e.message||String(e));
+  }
+}
+
+function wire(){
+  const drop=$('drop'), file=$('file');
+  drop.addEventListener('click',()=>file.click());
+  file.addEventListener('change',e=>{
+    const f=e.target.files[0]; if(!f) return;
+    f.text().then(t=>loadSVGText(t,f.name));
+  });
+  const zones=[drop, document.querySelector('.stage')].filter(Boolean);
+  zones.forEach(z=>{
+    ;['dragenter','dragover'].forEach(ev=>z.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('hot');}));
+    ;['dragleave','drop'].forEach(ev=>z.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('hot');}));
+    z.addEventListener('drop',e=>{
+      const f=e.dataTransfer && e.dataTransfer.files[0]; if(!f) return;
+      f.text().then(t=>loadSVGText(t,f.name));
+    });
+  });
+  const det=document.querySelector('.loadbar details'), stage=document.querySelector('.stage');
+  if(det && stage) det.addEventListener('toggle',()=>{
+    stage.classList.toggle('nostick', det.open);
+  });
+  $('rawgo').addEventListener('click',()=>{
+    const t=$('raw').value.trim();
+    if(t) loadSVGText(t,logoName);
+  });
+  const sliders=['diam','thick','cham','dome','logo','rel','bev','grow','draft','ring','wall','fwall','marg','rad'];
+  const sliderLabels=[];
+  sliders.forEach(id=>{
+    const el=$(id);
+    const lab=()=>{
+      const v=+el.value;
+      $('v-'+id).textContent=(id==='grow'&&v>0?'+':'')+v.toFixed(2).replace(/0$/,'').replace(/\.$/,'')+t('u.mmSuffix');
+    };
+    const upd=()=>{ lab(); refresh(); };
+    sliderLabels.push(lab);
+    el.addEventListener('input',upd); upd();
+  });
+  UI.sliders=()=>sliderLabels.forEach(f=>f());
+  $('insert').addEventListener('change',()=>{
+    const v=INS[$('insert').value];
+    if(v && v.d){
+      $('pd').value=v.d; $('pdep').value=v.t;
+      $('seat').value = v.mag ? 'socket' : 'flat';
+      if(v.mag && $('mount').value==='auto') $('mount').value='inset';
+      const mv=$('mount').value;
+      if(v.mag && mv==='pocket' && +$('thick').value < v.t+ +$('lid').value+ +$('fwall').value){
+        $('thick').value=Math.min(8,(v.t+ +$('lid').value+ +$('fwall').value+0.2)).toFixed(1);
+        $('v-thick').textContent=$('thick').value+t('u.mmSuffix');
+      }
+      if(v.mag && mv.indexOf('boss')===0)
+        $('bh').value=(v.t+ +$('lid').value+0.6).toFixed(1);
+      if(!v.mag && mv.indexOf('boss')===0) $('bh').value='0.8';
+    }
+    syncRows(); refresh();
+  });
+  $('inv').addEventListener('change',()=>{
+    if($('inv').checked && $('mode').value==='cut' && +$('ring').value<1.5){
+      $('ring').value=2.2; $('v-ring').textContent='2.2'+t('u.mmSuffix');
+    }
+  });
+  ['mode','inv','mount','insert','seat','lid','lidon','autoth','zone','bd','bh','bsp','pd','pdep','ox','oy','plate','solid','tech'].forEach(id=>$(id).addEventListener('input',()=>{
+    syncRows(); refresh();
+  }));
+  function syncRows(){
+    const mv=$('mode').value, mt=$('mount').value;
+    document.querySelectorAll('[data-only]').forEach(r=>{
+      r.style.display = r.dataset.only===mv ? '' : 'none';
+    });
+    const ins=INS[$('insert').value], seat=$('seat').value;
+    document.querySelectorAll('[data-seat]').forEach(r=>{
+      r.style.display = (r.dataset.seat===seat && mt!=='none') ? '' : 'none';
+    });
+    document.querySelectorAll('[data-ins]').forEach(r=>{
+      r.style.display = (ins && ins.mag && mt!=='none' && seat==='socket') ? '' : 'none';
+    });
+    document.querySelectorAll('[data-mount]').forEach(r=>{
+      const on = r.dataset.mount==='bossmanual' ? (mt==='boss'||mt==='boss2') : (r.dataset.mount==='boss2manual' ? mt==='boss2' : mt===r.dataset.mount);
+      r.style.display = on ? '' : 'none';
+    });
+  }
+  syncRows();
+  let flipped=false;
+  const updFlip=()=>{ $('flip').textContent = flipped ? t('flip.front') : t('flip.back'); };
+  UI.flip=updFlip; updFlip();
+  $('flip').addEventListener('click',()=>{
+    flipped=!flipped;
+    rot.x=flipped?1.35:-0.55; autoT=0;
+    updFlip();
+  });
+  const psel=$('printer');
+  const buildPrinters=()=>{
+    const cur=psel.value;
+    psel.innerHTML='';
+    Object.keys(PRINTERS).forEach(k=>{
+      const o=document.createElement('option'); o.value=k;
+      o.textContent = PRINTERS[k].i18n ? t(PRINTERS[k].i18n) : PRINTERS[k].name;
+      psel.appendChild(o);
+    });
+    if(cur) psel.value=cur;
+  };
+  UI.printers=buildPrinters; buildPrinters();
+  const syncFmt=()=>{
+    const f=$('fmt').value;
+    document.querySelectorAll('[data-fmt]').forEach(r=>{ r.style.display = r.dataset.fmt===f?'':'none'; });
+    $('dl').textContent = f==='3mf' ? t('dl.3mf') : t('dl.zip');
+  };
+  UI.fmt=syncFmt;
+  $('fmt').addEventListener('change',()=>{
+    if($('fmt').value==='3mf'){
+      const t=$('tech').value;
+      psel.value = t==='fdm02' ? 'gen02' : 'k1c';
+    }
+    syncFmt();
+  });
+  syncFmt();
+  $('dl').addEventListener('click',download);
+  document.querySelectorAll('[data-lang]').forEach(b=>{
+    b.addEventListener('click',()=>setLang(b.dataset.lang));
+  });
+}
+
+(function pickLang(){
+  let l=null;
+  try{ l=localStorage.getItem('pinforge.lang'); }catch(e){}
+  if(l!=='ru' && l!=='en'){
+    const nav=String(navigator.language||'ru').toLowerCase();
+    l = nav.indexOf('ru')===0 ? 'ru' : 'en';
+  }
+  LANG=l;
+})();
+
+if(!THREE_OK){
+  say(()=>t('msg.noThree'));
+} else {
+  initScene();
+}
+wire();
+if(THREE_OK) say(()=>t('msg.start'));
+applyLang();
+</script>
+</body>
+</html>
