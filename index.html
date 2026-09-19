@@ -200,6 +200,10 @@
       <div class="row"><label for="logo" data-i18n="f.size"></label>
         <input type="range" id="logo" min="5" max="100" step="0.5" value="17">
         <span class="val" id="v-logo"></span></div>
+      <div class="row" data-hide="cut"><label for="lx" data-i18n="f.logooff"></label>
+        <input type="number" id="lx" value="0" step="0.1" style="width:52px">
+        <input type="number" id="ly" value="0" step="0.1" style="width:52px">
+        <button type="button" id="lcenter" style="padding:3px 8px;font-size:11px" data-i18n="f.logocenter"></button></div>
       <div class="row"><label for="rel" data-i18n="f.rel"></label>
         <input type="range" id="rel" min="0.2" max="2" step="0.05" value="0.5">
         <span class="val" id="v-rel"></span></div>
@@ -215,6 +219,7 @@
       <div class="row"><label for="inv" data-i18n="f.inv"></label>
         <input type="checkbox" id="inv"></div>
       <div class="hint" data-i18n-html="hint.grow"></div>
+      <div class="hint" data-hide="cut" data-i18n="hint.logooff"></div>
     </div>
 
     <div class="grp">
@@ -344,6 +349,9 @@ ru:{
   'f.dome':'Купол сверху',
   'g.logo':'Логотип',
   'f.size':'Размер (макс. габарит)',
+  'f.logooff':'Сдвиг логотипа X / Y',
+  'f.logocenter':'по буквам',
+  'hint.logooff':'Логотип центруется по габаритному прямоугольнику, поэтому выносные элементы вроде «t» или «б» тянут его вверх. Кнопка «по буквам» центрует по основной высоте строки, дальше можно подвинуть вручную.',
   'f.rel':'Высота рельефа',
   'f.bev':'Фаска букв',
   'f.grow':'Утолщение штриха (±)',
@@ -541,6 +549,9 @@ en:{
   'f.dome':'Top dome',
   'g.logo':'Logo',
   'f.size':'Size (longest side)',
+  'f.logooff':'Logo offset X / Y',
+  'f.logocenter':'by letters',
+  'hint.logooff':'The logo is centred on its bounding box, so ascenders like "t" pull it upward. The "by letters" button centres on the main line height instead, and you can nudge it by hand from there.',
   'f.rel':'Relief height',
   'f.bev':'Letter bevel',
   'f.grow':'Stroke thickening (±)',
@@ -1211,6 +1222,7 @@ function readParams(){
     autoth:$('autoth').checked, seat:$('seat').value, padh:+$('bh').value||0.8,
     wall:+$('wall').value, fwall:+$('fwall').value,
     ox:+$('ox').value||0, oy:+$('oy').value||0,
+    lx:+$('lx').value||0, ly:+$('ly').value||0,
     insert:$('insert').value, lid:(INS[$('insert').value]&&INS[$('insert').value].mag)?+$('lid').value:0,
     mount:$('mount').value, bd:+$('bd').value, bh:+$('bh').value, bsp:+$('bsp').value,
     pock:$('mount').value==='pocket'||$('mount').value==='auto', pd:+$('pd').value, pdep:+$('pdep').value
@@ -1533,6 +1545,42 @@ function discGeo(R,h){
 
 function warn(t){ if(buildWarn.indexOf(t)<0) buildWarn.push(t); }
 
+/* Габаритный прямоугольник включает выносные элементы, и надпись из-за них
+   съезжает. Берём вертикальные середины контуров, медиану считаем основной
+   высотой строки и центруем по ней. Сдвиг зажимаем так, чтобы логотип не
+   вылез за плашку: проверено синтетикой, см. историю правок. */
+function letterBandCenter(){
+  if(!logoRings || !logoRings.length) return null;
+  let minx=1e9,maxx=-1e9,miny=1e9,maxy=-1e9;
+  const mids=[];
+  logoRings.forEach(r=>{
+    let a=1e9,b=-1e9;
+    r.forEach(q=>{
+      if(q.x<minx)minx=q.x; if(q.x>maxx)maxx=q.x;
+      if(q.y<miny)miny=q.y; if(q.y>maxy)maxy=q.y;
+      if(q.y<a)a=q.y; if(q.y>b)b=q.y;
+    });
+    if(b>a) mids.push((a+b)/2);
+  });
+  if(!mids.length) return null;
+  mids.sort((u,v)=>u-v);
+  const med = mids.length%2 ? mids[(mids.length-1)/2]
+                            : (mids[mids.length/2-1]+mids[mids.length/2])/2;
+  const w=maxx-minx, hh=maxy-miny;
+  const k=(+$('logo').value)/Math.max(w,hh);
+  const cy=(miny+maxy)/2;
+  const raw=(cy-med)*k;
+
+  const mode=$('mode').value;
+  let limit=0;
+  if(mode==='rect') limit=Math.max(0,(+$('marg').value)-0.3);
+  else if(mode==='disc'){
+    const halfDiag=Math.hypot(w*k,hh*k)/2;
+    limit=Math.max(0,(+$('diam').value)/2-halfDiag-0.3);
+  }
+  return {x:0, y:clamp(raw,-limit,limit)};
+}
+
 function buildPin(p){
   if(!logoRings || !THREE_OK) return null;
   const group=new THREE.Group();
@@ -1546,11 +1594,17 @@ function buildPin(p){
   const k=p.logo/Math.max(w,hh);
   const cx=(minx+maxx)/2, cy=(miny+maxy)/2;
   const scaled=logoRings.map(r=>r.map(q=>({x:(q.x-cx)*k,y:(q.y-cy)*k})));
+  // Сдвиг надписи внутри плашки. В режиме «по контуру» плашка сама следует
+  // за буквами, так что двигать там нечего.
+  const lx = p.mode==='cut' ? 0 : (p.lx||0);
+  const ly = p.mode==='cut' ? 0 : (p.ly||0);
+  const scaledLogo = (lx||ly) ? scaled.map(r=>r.map(q=>({x:q.x+lx,y:q.y+ly}))) : scaled;
 
   const engrave=p.inv;
   const relief=engrave?Math.min(p.rel,p.h*0.6):p.rel;
-  const mat=new THREE.MeshPhongMaterial({color:0xd8dade,specular:0xffffff,shininess:110});
-  const logoMat=new THREE.MeshPhongMaterial({color:0xe8eaee,specular:0xffffff,shininess:140});
+  // тон плашки заметно темнее букв, иначе на превью рельеф сливается
+  const mat=new THREE.MeshPhongMaterial({color:0xb4b9c2,specular:0x8f95a0,shininess:60});
+  const logoMat=new THREE.MeshPhongMaterial({color:0xf3f5f9,specular:0xffffff,shininess:160});
   const off=Math.max(0.15,p.grow/2+p.ring);
   const LAY=(TECH[p.tech]||TECH.fdm02).layer;
   const minTop=Math.max(p.fwall,LAY);                 // не тоньше одного слоя
@@ -1679,7 +1733,7 @@ function buildPin(p){
 
   let count=0;
   if(engrave){
-    const parts=ringsToParts(scaled,p.grow/2);
+    const parts=ringsToParts(scaledLogo,p.grow/2);
     count=parts.outers.length+parts.inners.length;
     const face = p.mode==='disc' ? [discShape(p.D/2)]
                                  : partsToShapes({outers:parts.outers,inners:[]});
@@ -1687,9 +1741,10 @@ function buildPin(p){
     const all=face.concat(parts.inners.map(r=>new THREE.Shape(V2(r))));
     const g=EX(all,relief);
     g.translate(0,0,bodyH);
-    group.add(new THREE.Mesh(g,mat));
+    // врезка: верхняя плита светлая, в провалах видно тёмное тело
+    group.add(new THREE.Mesh(g,logoMat));
   } else {
-    const res=ringsToShapes(scaled,p.grow/2);
+    const res=ringsToShapes(scaledLogo,p.grow/2);
     count=res.count;
     if(!res.shapes.length) return null;
     const bev=Math.min(p.bev,relief*0.4);
@@ -1700,13 +1755,14 @@ function buildPin(p){
     lg.translate(0,0,bodyH-0.001+(p.dome>0&&p.mode==='disc'?p.dome*0.35:0));
     group.add(new THREE.Mesh(lg,logoMat));
     if(p.draft>0.005){
-      const sk=ringsToShapes(scaled,p.grow/2+p.draft).shapes;
+      const sk=ringsToShapes(scaledLogo,p.grow/2+p.draft).shapes;
       const sg=new THREE.ExtrudeGeometry(sk,{depth:Math.min(relief*0.45,0.25),bevelEnabled:false,steps:1,curveSegments:1});
       sg.translate(0,0,bodyH-0.001);
       group.add(new THREE.Mesh(sg,logoMat));
     }
   }
 
+  group.traverse(o=>{ if(o.isMesh){ o.castShadow=true; o.receiveShadow=true; } });
   ghosts.forEach(gp=>group.add(makeGhost(Math.max(1,p.pd-0.25),p.pdep,gp[0],gp[1],gp[2])));
 
   group.userData.meta={
@@ -1728,11 +1784,26 @@ function buildPin(p){
 }
 
 /* ============ сцена ============ */
-let renderer,scene,camera,pivot,current,raf;
+let renderer,scene,camera,pivot,current,raf,keyLight;
+
+/* Рамка карты теней считается от габарита модели: слишком широкая даёт
+   рваные края, слишком узкая обрезает тень. */
+function fitShadow(span){
+  if(!keyLight) return;
+  const r=Math.max(14,span*0.8);
+  const d=Math.max(70,span*2.4);
+  keyLight.position.set(-0.40*d,-0.52*d,0.76*d);
+  const c=keyLight.shadow.camera;
+  c.left=-r; c.right=r; c.top=r; c.bottom=-r;
+  c.near=d*0.15; c.far=d*2.6;
+  c.updateProjectionMatrix();
+}
 function initScene(){
   const canvas=$('view');
   renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true,preserveDrawingBuffer:false});
   renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.shadowMap.enabled=true;
+  renderer.shadowMap.type=THREE.PCFSoftShadowMap;
   scene=new THREE.Scene();
   camera=new THREE.PerspectiveCamera(35,2,0.1,500);
   camera.position.set(0,-46,30);
@@ -1740,10 +1811,17 @@ function initScene(){
   camera.lookAt(0,0,0);
   pivot=new THREE.Group();
   scene.add(pivot);
-  scene.add(new THREE.AmbientLight(0xffffff,0.45));
-  const l1=new THREE.DirectionalLight(0xffffff,0.85); l1.position.set(-20,-30,40); scene.add(l1);
-  const l2=new THREE.DirectionalLight(0xbfd4ff,0.5); l2.position.set(30,-10,20); scene.add(l2);
-  const l3=new THREE.DirectionalLight(0xffe9c9,0.45); l3.position.set(10,30,-15); scene.add(l3);
+  scene.add(new THREE.AmbientLight(0xffffff,0.34));
+  keyLight=new THREE.DirectionalLight(0xffffff,1.05);
+  keyLight.castShadow=true;
+  keyLight.shadow.mapSize.set(2048,2048);
+  keyLight.shadow.bias=-0.0009;
+  keyLight.shadow.normalBias=0.04;
+  scene.add(keyLight);
+  scene.add(keyLight.target);   // без цели в сцене направление света не пересчитается
+  fitShadow(46);
+  const l2=new THREE.DirectionalLight(0xbfd4ff,0.42); l2.position.set(30,-10,20); scene.add(l2);
+  const l3=new THREE.DirectionalLight(0xffe9c9,0.36); l3.position.set(10,30,-15); scene.add(l3);
   resize();
   window.addEventListener('resize',resize);
   bindDrag(canvas);
@@ -1812,7 +1890,7 @@ function refresh(){
   $('dl').disabled=false;
   showAnalysis(m.params);
   const span=m.plate?110:Math.max(m.params.D||30,m.params.logo)*1.9;
-  if(lastSpan!==span){ dist=span; lastSpan=span; }
+  if(lastSpan!==span){ dist=span; lastSpan=span; fitShadow(span); }
 }
 let lastSpan=0;
 
@@ -2240,13 +2318,22 @@ function wire(){
       $('ring').value=2.2; $('v-ring').textContent='2.2'+t('u.mmSuffix');
     }
   });
-  ['mode','inv','mount','insert','seat','lid','lidon','autoth','zone','bd','bh','bsp','pd','pdep','ox','oy','plate','solid','tech'].forEach(id=>$(id).addEventListener('input',()=>{
+  $('lcenter').addEventListener('click',()=>{
+    const c=letterBandCenter();
+    if(!c) return;
+    $('lx').value=c.x.toFixed(2); $('ly').value=c.y.toFixed(2);
+    refresh();
+  });
+  ['mode','inv','mount','insert','seat','lid','lidon','autoth','zone','bd','bh','bsp','pd','pdep','ox','oy','lx','ly','plate','solid','tech'].forEach(id=>$(id).addEventListener('input',()=>{
     syncRows(); refresh();
   }));
   function syncRows(){
     const mv=$('mode').value, mt=$('mount').value;
     document.querySelectorAll('[data-only]').forEach(r=>{
       r.style.display = r.dataset.only===mv ? '' : 'none';
+    });
+    document.querySelectorAll('[data-hide]').forEach(r=>{
+      r.style.display = r.dataset.hide===mv ? 'none' : '';
     });
     const ins=INS[$('insert').value], seat=$('seat').value;
     document.querySelectorAll('[data-seat]').forEach(r=>{
