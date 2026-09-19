@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Pin Forge — генератор пинов из SVG</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='11' r='9' fill='%23d97757'/%3E%3Crect x='14.8' y='17' width='2.4' height='13' rx='1.2' fill='%23d97757'/%3E%3Crect x='10.4' y='23' width='11.2' height='2.4' rx='1.2' fill='%23d97757'/%3E%3C/svg%3E">
 <style>
   :root{
     color-scheme: light dark;
@@ -1320,6 +1321,37 @@ function voidCyl(r,d,x,y,zc){
 
 const PADMAT=new THREE.MeshPhongMaterial({color:0xa9b0bb,specular:0x777777,shininess:60});
 const GHOST=new THREE.MeshPhongMaterial({color:0xd97757,specular:0x222222,shininess:30,transparent:true,opacity:0.85,depthTest:false,depthWrite:false});
+/* Игла-бабочка целиком: пятак, игла и бабочка на ней. Размеры с реальной
+   фурнитуры: пятак Ø10, полная высота около 9 мм, бабочка Ø11.5.
+   Игла растёт наружу от спинки, то есть в минус по Z. */
+function makeNeedleGhost(d,t,x,y,z0){
+  const g=new THREE.Group();
+  const cylZ=(rTop,rBot,h,seg)=>{
+    const c=new THREE.CylinderGeometry(rTop,rBot,h,seg||24,1,false);
+    c.rotateX(Math.PI/2);   // ось Y цилиндра смотрит в +Z
+    return c;
+  };
+  const add=(geo,pz,px)=>{
+    geo.translate(x+(px||0),y,pz);
+    const m=new THREE.Mesh(geo,GHOST);
+    m.renderOrder=999; m.userData.preview=true;
+    g.add(m);
+  };
+  add(cylZ(d/2,d/2,t,40), z0+t/2);                    // пятак
+  const postLen=6.4, tipLen=1.3, postR=0.55;
+  add(cylZ(postR,postR,postLen,18), z0-postLen/2);    // игла
+  add(cylZ(postR,0,tipLen,18), z0-postLen-tipLen/2);  // остриё
+  const cz=z0-postLen*0.62;
+  add(cylZ(1.6,1.6,1.5,22), cz);                      // корпус бабочки
+  // крылья — проволочные петли, а не диски: сквозь них видно спинку
+  [-1,1].forEach(sgn=>{
+    const wing=new THREE.TorusGeometry(2.3,0.42,10,26);
+    wing.rotateY(sgn*0.30);
+    add(wing, cz+0.2, sgn*2.7);
+  });
+  return g;
+}
+
 function makeGhost(d,t,x,y,z0){
   const g=new THREE.CylinderGeometry(d/2,d/2,t,40,1,false);
   g.rotateX(Math.PI/2); g.translate(x,y,z0+t/2);
@@ -1803,7 +1835,12 @@ function buildPin(p){
   }
 
   group.traverse(o=>{ if(o.isMesh){ o.castShadow=true; o.receiveShadow=true; } });
-  ghosts.forEach(gp=>group.add(makeGhost(Math.max(1,p.pd-0.25),p.pdep,gp[0],gp[1],gp[2])));
+  const ghostD=Math.max(1,p.pd-0.25);
+  ghosts.forEach(gp=>group.add(
+    p.insert==="needle"
+      ? makeNeedleGhost(ghostD,p.pdep,gp[0],gp[1],gp[2])
+      : makeGhost(ghostD,p.pdep,gp[0],gp[1],gp[2])
+  ));
 
   group.userData.meta={
     size: p.mode==='disc' ? t('size.disc',p.D.toFixed(1))
