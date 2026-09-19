@@ -1287,6 +1287,29 @@ function attachHoles(shapes,holeRings){
     if(tgt) tgt.holes.push(new THREE.Path(V2(r)));
   });
 }
+/* ExtrudeGeometry строит боковые стенки по порядку точек контура: внешний
+   должен идти против часовой стрелки, отверстия по часовой. Контуры плашки
+   и букв приходят из трассировки в произвольной ориентации, и при неверной
+   стенка выворачивается наизнанку. Для слайсера это дыра в теле: именно из-за
+   этого пропадал карман под вставку и сыпались non-manifold edges. */
+function normShapes(list){
+  const SEG=36;
+  return list.map(sh=>{
+    let outer;
+    try{ outer=sh.getPoints(SEG); }catch(e){ return sh; }
+    if(!outer || outer.length<3) return sh;
+    if(signedArea(outer)<0) outer=outer.slice().reverse();
+    const ns=new THREE.Shape(outer);
+    (sh.holes||[]).forEach(h=>{
+      let pts; try{ pts=h.getPoints(SEG); }catch(e){ pts=null; }
+      if(!pts || pts.length<3) return;
+      if(signedArea(pts)>0) pts=pts.slice().reverse();
+      ns.holes.push(new THREE.Path(pts));
+    });
+    return ns;
+  });
+}
+
 function discShape(R){
   const s=new THREE.Shape();
   s.absellipse(0,0,R,R,0,Math.PI*2,false);
@@ -1445,12 +1468,32 @@ function insideAny(pt,rings){ for(let i=0;i<rings.length;i++) if(pointInPoly(pt,
 function makeRegion(outers,inners){
   return pt => insideAny(pt,outers) && !(inners.length && insideAny(pt,inners));
 }
+/* Точки границы для расчёта запаса под вставку. Раньше брались сами вершины
+   контура с шагом: у прямоугольника и круга на длинных сторонах вершин почти
+   нет, расстояние до ближайшей вершины оказывалось вдвое больше расстояния до
+   самой стороны, и генератор считал, что вставка помещается. Отверстие потом
+   вырезалось шире плашки и рвало сетку. Теперь точки раскладываются равномерно
+   по периметру, поэтому ошибка не больше половины шага. */
 function boundaryPts(rings,maxN){
-  let total=0; rings.forEach(r=>total+=r.length);
-  const st=Math.max(1,Math.ceil(total/(maxN||520)));
+  const N=Math.max(64,maxN||900);
+  let per=0;
+  rings.forEach(r=>{
+    for(let i=0;i<r.length;i++){
+      const a=r[i], b=r[(i+1)%r.length];
+      per+=Math.hypot(b.x-a.x,b.y-a.y);
+    }
+  });
+  const step=Math.max(1e-6, per/N);
   const pts=[];
-  rings.forEach(r=>{ for(let i=0;i<r.length;i+=st) pts.push(r[i]); });
-  return pts;
+  rings.forEach(r=>{
+    for(let i=0;i<r.length;i++){
+      const a=r[i], b=r[(i+1)%r.length];
+      const dx=b.x-a.x, dy=b.y-a.y, len=Math.hypot(dx,dy);
+      const n=Math.max(1,Math.round(len/step));
+      for(let j=0;j<n;j++) pts.push({x:a.x+dx*j/n, y:a.y+dy*j/n});
+    }
+  });
+  return pts.length?pts:rings.flat();
 }
 function bboxOf(rings){
   let minx=1e9,maxx=-1e9,miny=1e9,maxy=-1e9;
@@ -1764,7 +1807,9 @@ function buildPin(p){
   const thick = (p.autoth && wantIn) ? Math.max(p.h, p.pdep+minTop) : p.h;
   if(thick>p.h+0.01) warn(t('w.thickUp',p.h.toFixed(1),thick.toFixed(1),minTop.toFixed(2)));
   const bodyH=engrave?Math.max(0.4,thick-relief):thick;
-  const EX=(sh,d)=>new THREE.ExtrudeGeometry(sh,{depth:d,bevelEnabled:false,steps:1,curveSegments:36});
+  const EX=(sh,d)=>new THREE.ExtrudeGeometry(
+    normShapes(Array.isArray(sh)?sh:[sh]),
+    {depth:d,bevelEnabled:false,steps:1,curveSegments:36});
 
   const ghosts=[];
   const lidded = p.lid>0.05 && p.mount!=='none';
@@ -1772,17 +1817,21 @@ function buildPin(p){
   const kind = (p.mount==='auto'||noPad) ? 'pocket' : p.mount;
 
   // область спинки, куда можно сажать вставку
+  // В гравировку нельзя резать по пустоте: при врезанных буквах плашка
+  // всегда сплошная, иначе контрформы становятся сквозными дырами и
+  // верхняя плита вычитает сама себя.
+  const solidPlate = p.solid || engrave;
   const plateKey = p.mode==='disc' ? null
-    : [p.logo,p.ring,p.grow,p.solid,logoName].join('|');
+    : [p.logo,p.ring,p.grow,solidPlate,logoName].join('|');
   const rw=w*k+2*p.marg, rh=hh*k+2*p.marg;
   const parts = p.mode==='disc'
     ? {outers:[circlePoly(p.D/2)], inners:[]}
     : p.mode==='rect'
     ? {outers:[roundRectPoly(rw,rh,p.rad)], inners:[]}
-    : plateParts(scaled,off,p.solid,plateKey);
-  const innerHoles = (p.mode==='disc'||p.solid) ? [] : parts.inners;
+    : plateParts(scaled,off,solidPlate,plateKey);
+  const innerHoles = (p.mode==='disc'||solidPlate) ? [] : parts.inners;
   const region = makeRegion(parts.outers, innerHoles);
-  const bpts = boundaryPts(parts.outers.concat(innerHoles),520);
+  const bpts = boundaryPts(parts.outers.concat(innerHoles),900);
   const bb2 = bboxOf(parts.outers);
 
   const needFull=p.pd/2+p.wall, needMin=p.pd/2+0.35;
@@ -1834,14 +1883,19 @@ function buildPin(p){
     } else if(cav>0.05){
       const low=plate();
       spots.forEach(sp=>{
-        const h=new THREE.Path();
-        h.absellipse(sp.x,sp.y,p.pd/2,p.pd/2,0,Math.PI*2,true);
-        let tgt=low[0];
+        let tgt=null;
         for(const shp of low){ let pts; try{pts=shp.getPoints();}catch(e){pts=null;}
           if(pts&&pointInPoly({x:sp.x,y:sp.y},pts)){ tgt=shp; break; } }
-        if(tgt) tgt.holes.push(h);
+        if(!tgt) tgt=low[0];
+        if(!tgt) return;
+        const h=new THREE.Path();
+        h.absellipse(sp.x,sp.y,p.pd/2,p.pd/2,0,Math.PI*2,true);
+        tgt.holes.push(h);   // направление обхода поправит normShapes в EX
       });
-      group.add(new THREE.Mesh(EX(low,cav),mat));
+      // нижняя плита с отверстием заходит на 0.02 выше стыка: тела должны
+      // пересекаться, а не касаться ровно в плоскости. Глубину кармана это
+      // не меняет, сверху его закрывает сплошная верхняя плита.
+      group.add(new THREE.Mesh(EX(low,cav+0.02),mat));
       const g=EX(plate(),bodyH-cav); g.translate(0,0,cav);
       group.add(new THREE.Mesh(g,mat));
     } else {
@@ -1885,12 +1939,15 @@ function buildPin(p){
 
   let count=0;
   if(engrave){
-    const parts=ringsToParts(scaledLogo,p.grow/2);
-    count=parts.outers.length+parts.inners.length;
-    const face = p.mode==='disc' ? [discShape(p.D/2)]
-                                 : partsToShapes({outers:parts.outers,inners:[]});
-    attachHoles(face,parts.outers);
-    const all=face.concat(parts.inners.map(r=>new THREE.Shape(V2(r))));
+    /* Верхняя плита — это поверхность плашки, в которой буквы вырезаны
+       углублениями. Раньше она строилась из самих контуров букв, и те же
+       контуры добавлялись в неё как отверстия: фигура вычитала сама себя,
+       отсюда рваная сетка. Форма плашки берётся из parts, буквы из lp. */
+    const lp=ringsToParts(scaledLogo,p.grow/2);
+    count=lp.outers.length+lp.inners.length;
+    const face = p.mode==='disc' ? [discShape(p.D/2)] : partsToShapes(parts);
+    attachHoles(face,lp.outers);
+    const all=face.concat(lp.inners.map(r=>new THREE.Shape(V2(r))));
     const g=EX(all,relief);
     g.translate(0,0,bodyH);
     // врезка: верхняя плита светлая, в провалах видно тёмное тело
@@ -2249,13 +2306,20 @@ const PRINTERS={
 };
 
 function meshXML(group,bed){
-  const V=[],T=[],map=new Map();
+  /* Модель собрана из нескольких замкнутых тел, которые касаются друг друга.
+     Если сваривать вершины сквозь все тела, на стыке ребро получает четыре
+     грани вместо двух, и слайсер справедливо ругается на негерметичность.
+     Поэтому у каждого тела своё пространство вершин: внутри тела сварка
+     нужна и делает его замкнутым, между телами — нет. */
+  const V=[],T=[];
+  let map=new Map();
   const a=new THREE.Vector3();
   let minz=1e9,minx=1e9,miny=1e9,maxx=-1e9,maxy=-1e9;
-  const tri=[];
+  const tri=[], starts=[];
   group.traverse(o=>{
     if(!o.isMesh||o.userData.preview) return;
     o.updateMatrixWorld(true);
+    starts.push(tri.length);
     const g=o.geometry,pos=g.attributes.position,idx=g.index;
     const n=idx?idx.count:pos.count;
     for(let i=0;i<n;i++){
@@ -2273,7 +2337,9 @@ function meshXML(group,bed){
     if(i===undefined){ i=V.length; map.set(k,i); V.push(x+' '+y+' '+z); }
     return i;
   };
+  let sIdx=0;
   for(let i=0;i<tri.length;i+=9){
+    if(sIdx<starts.length && i===starts[sIdx]){ map=new Map(); sIdx++; }
     const p=[];
     for(let v=0;v<3;v++)
       p.push(idxOf(r(tri[i+v*3]-minx), r(tri[i+v*3+1]-miny), r(tri[i+v*3+2]-minz)));
