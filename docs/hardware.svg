@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1290 370" width="1290" height="370" role="img">
+<style>
+  .metal{fill:#c9ccd3;stroke:#6f747d;stroke-width:1.4}
+  .body{fill:#e6e8ec;stroke:#6f747d;stroke-width:1.4}
+  .relief{fill:#f4f6f9;stroke:#6f747d;stroke-width:1.2}
+  .hole{fill:#8b9099;stroke:none}
+  .dim{stroke:#c8643c;stroke-width:1;fill:none}
+  .dimtick{stroke:#c8643c;stroke-width:1}
+  .dimtxt{fill:#c8643c;font-size:12px;font-weight:600;
+    font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}
+  .title{fill:#8d8d86;font-size:11px;font-weight:700;letter-spacing:1.4px;
+    font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}
+  .lbl{fill:#8d8d86;font-size:11.5px;
+    font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}
+  .note{fill:#8d8d86;font-size:11.5px;
+    font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}
+  .fabric{stroke:#8d8d86;stroke-width:1.4;stroke-dasharray:6 5;fill:none}
+  .lead{stroke:#b4b4ad;stroke-width:1;fill:none}
+</style>
+<text class="title" x="40" y="32" text-anchor="start">ИГЛА-БАБОЧКА</text>
+<line class="dim" x1="119.5" y1="70" x2="280.5" y2="70"/><line class="dimtick" x1="119.5" y1="66" x2="119.5" y2="74"/><line class="dimtick" x1="280.5" y1="66" x2="280.5" y2="74"/><text class="dimtxt" x="200" y="61" text-anchor="middle">Ø11.5&#160;мм</text>
+<path class="metal" d="M 119.5 108 L 126.5 86 Q 200 79 273.5 86 L 280.5 108 Z"/>
+<ellipse class="hole" cx="200" cy="85" rx="5" ry="2.3"/>
+<text class="lbl" x="200" y="128" text-anchor="middle">прижимная шайба</text>
+<path class="metal" d="M 200 168 L 193 186 L 207 186 Z"/>
+<rect class="metal" x="193" y="185" width="14" height="97"/>
+<rect class="metal" x="130" y="282" width="140" height="12" rx="5"/>
+<line class="dim" x1="308" y1="168" x2="308" y2="294"/><line class="dimtick" x1="304" y1="168" x2="312" y2="168"/><line class="dimtick" x1="304" y1="294" x2="312" y2="294"/><text class="dimtxt" x="323" y="231" text-anchor="middle" transform="rotate(-90 323 231)">9&#160;мм</text>
+<line class="dim" x1="130" y1="320" x2="270" y2="320"/><line class="dimtick" x1="130" y1="316" x2="130" y2="324"/><line class="dimtick" x1="270" y1="316" x2="270" y2="324"/><text class="dimtxt" x="200" y="337" text-anchor="middle">Ø10&#160;мм</text>
+<text class="lbl" x="200" y="356" text-anchor="middle">игла с пятаком</text>
+<text class="title" x="440" y="32" text-anchor="start">КАК СИДИТ В ЗНАЧКЕ</text>
+<rect class="relief" x="522" y="101" width="34" height="11" rx="3"/>
+<rect class="relief" x="574" y="101" width="58" height="11" rx="3"/>
+<rect class="relief" x="644" y="101" width="22" height="11" rx="3"/>
+<rect class="body" x="485" y="110" width="230" height="38" rx="9"/>
+<rect class="metal" x="555" y="137" width="90" height="11" rx="4"/>
+<rect class="metal" x="594.5" y="148" width="11" height="92" rx="2"/>
+<path class="metal" d="M 594.5 240 L 600 254 L 605.5 240 Z"/>
+<line class="fabric" x1="450" y1="178" x2="588" y2="178"/>
+<line class="fabric" x1="612" y1="178" x2="750" y2="178"/>
+<path class="metal" d="M 532 208 L 539 186 Q 600 179 661 186 L 668 208 Z"/>
+<line class="lead" x1="482" y1="122" x2="452" y2="122"/>
+<text class="lbl" x="447" y="126" text-anchor="end">значок</text>
+<line class="lead" x1="552" y1="143" x2="452" y2="143"/>
+<text class="lbl" x="447" y="147" text-anchor="end">гнездо в спинке</text>
+<line class="lead" x1="752" y1="178" x2="772" y2="178"/>
+<text class="lbl" x="777" y="182" text-anchor="start">ткань</text>
+<line class="lead" x1="670" y1="198" x2="772" y2="198"/>
+<text class="lbl" x="777" y="202" text-anchor="start">шайба</text>
+<text class="note" x="440" y="300" text-anchor="start">Пятак вклеивается в гнездо на спинке.</text>
+<text class="note" x="440" y="318" text-anchor="start">Игла проходит сквозь ткань, шайба держит с изнанки.</text>
+<text class="title" x="840" y="32" text-anchor="start">НЕОДИМОВЫЙ МАГНИТ</text>
+<rect class="metal" x="968" y="74" width="84" height="42" rx="3"/>
+<line class="dim" x1="1068" y1="74" x2="1068" y2="116"/><line class="dimtick" x1="1064" y1="74" x2="1072" y2="74"/><line class="dimtick" x1="1064" y1="116" x2="1072" y2="116"/><text class="dimtxt" x="1083" y="95" text-anchor="middle" transform="rotate(-90 1083 95)">3&#160;мм</text>
+<line class="dim" x1="968" y1="140" x2="1052" y2="140"/><line class="dimtick" x1="968" y1="136" x2="968" y2="144"/><line class="dimtick" x1="1052" y1="136" x2="1052" y2="144"/><text class="dimtxt" x="1010" y="157" text-anchor="middle">Ø6&#160;мм</text>
+<rect class="relief" x="950" y="191" width="44" height="11" rx="3"/>
+<rect class="relief" x="1018" y="191" width="26" height="11" rx="3"/>
+<rect class="body" x="915" y="200" width="190" height="38" rx="9"/>
+<rect class="metal" x="982" y="222" width="56" height="16" rx="2"/>
+<line class="fabric" x1="898" y1="256" x2="1122" y2="256"/>
+<rect class="metal" x="982" y="264" width="56" height="16" rx="2"/>
+<line class="lead" x1="1042" y1="230" x2="1126" y2="230"/>
+<text class="lbl" x="1131" y="234" text-anchor="start">карман в спинке</text>
+<line class="lead" x1="1042" y1="272" x2="1126" y2="272"/>
+<text class="lbl" x="1131" y="276" text-anchor="start">ответный магнит</text>
+<text class="note" x="840" y="320" text-anchor="start">Магнит вклеивается заподлицо, ответный с изнанки.</text>
+<text class="note" x="840" y="338" text-anchor="start">Клеить только в паре: полярность выставится сама.</text>
+</svg>

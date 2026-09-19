@@ -29,12 +29,54 @@ The interface is bilingual, English and Russian, with a switch in the header.
 - **A test tile** — a 3×3 grid across logo sizes and relief heights, so one
   print tells you which combination survives.
 
+## The hardware at the back
+
+![Butterfly clutch pin and neodymium magnet, with dimensions and a section through the pin](docs/hardware.en.svg)
+
+The generator sizes the socket for whichever of these you pick, finds the spot
+closest to the centre where it actually fits, and warns you when it does not.
+
 ## SVG requirements
 
 - text converted to outlines
 - strokes converted to filled paths (Illustrator: Object → Path → Stroke to Path)
 - no `clipPath`, no masks, no `<use>`
 - shapes with a fill, not stroke-only
+
+## Print settings
+
+**Download the ready project.** Choose `Orca / Bambu project (.3mf)` as the
+format and the file arrives with the whole print profile inside, so there is
+nothing to type into the slicer. One setup step is needed first, see 3mf export
+below.
+
+**Or read them off the screen.** The Print settings section of the interface
+lists every value the generator would apply, with a copy button. That is the way
+to go when your slicer is not in the Bambu and Orca family, or when you would
+rather see what changes before it changes.
+
+What it actually changes, and why:
+
+- **Layer height 0.08 mm**, so a relief of 0.48 mm lands on a whole number of
+  layers rather than a fraction the slicer rounds off however it likes.
+- **Arachne wall generator.** A 0.85 mm stroke is 2.02 lines wide. The classic
+  generator lays two lines and stuffs the remainder with gap fill, which makes
+  letters ripple. Arachne stretches two lines to 0.425 and skips the mess.
+- **Compensations in a pair:** holes +0.05 mm, contour −0.05 mm. Counters in e
+  and o stay open, outer edges stay crisp, neighbouring letters do not merge.
+- **Small perimeters at 40 mm/s below 2 mm.** The single most useful field in
+  the list. It ships switched off, which sends every letter counter around at
+  full speed.
+- **Ironing on top surfaces,** so letter tops come out flat and glossy and take
+  chrome or wax evenly.
+- **Accelerations cut to 3000, and 1500 on the outer wall.** Stock on a K1C is
+  over 10000, and at that rate the head accelerates and brakes inside a single
+  letter: corners round off and straights ring.
+- **Cooling at full from the second layer.** At this layer height a single copy
+  gives the plastic no time to set.
+
+Value by value, with the reasoning, in [PRINT-SETTINGS.md](PRINT-SETTINGS.md).
+That file is in Russian.
 
 ## What is in the repository
 
@@ -75,10 +117,6 @@ Everything sits in one `<script>` at the end of `index.html`, in sections:
   Russian is the complete dictionary: a key missing from English falls back to it.
 
 ## Processes
-
-Every value the generator would apply is listed in the Print settings section
-of the interface, with a copy button, and explained value by value in
-[PRINT-SETTINGS.md](PRINT-SETTINGS.md), which is in Russian.
 
 The minimum stroke and gap thresholds depend on the selected process (`TECH` in
 the code). For FDM the generator also suggests how to tune the stroke to a whole
