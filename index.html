@@ -99,6 +99,13 @@
   details.grp>summary:hover{color:var(--ink)}
   details.grp>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
   .statsep{margin-top:10px;padding-top:9px;border-top:1px solid var(--line)}
+  .recipe{margin-top:9px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px}
+  .recipe>div{display:flex;justify-content:space-between;gap:10px;padding:1.5px 0;min-width:0}
+  .recipe>div>span{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .recipe>div>b{color:var(--ink);font-weight:500;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .recipe.resin{font-family:inherit;font-size:12px;color:var(--muted)}
+  .recipe.resin p{margin:0 0 6px;padding-left:12px;text-indent:-12px}
+  .recipe.resin p::before{content:"\2022  ";color:var(--accent)}
   footer{max-width:1320px;margin:0 auto;padding:0 20px 28px;
     display:flex;align-items:center;justify-content:flex-end;gap:8px;
     color:var(--muted);font-size:12px}
@@ -317,6 +324,13 @@
       </div>
     </details>
 
+    <details class="grp" id="grp-recipe">
+      <summary data-i18n="g.recipe"></summary>
+      <div class="hint" data-i18n="recipe.hint"></div>
+      <div id="recipe" class="recipe"></div>
+      <button type="button" id="recipe-copy" data-i18n="recipe.copy" style="margin-top:9px"></button>
+    </details>
+
     <details class="grp" id="grp-export" open>
       <summary data-i18n="g.export"></summary>
       <div class="row"><label for="plate" data-i18n="f.plate"></label>
@@ -421,6 +435,20 @@ ru:{
   'f.pdep':'Глубина',
   'hint.pocket':'Пятак на фото — Ø10&nbsp;мм. Карман 10.3&nbsp;мм даёт зазор под эпоксидку и утапливает диск заподлицо, чтобы значок не болтался.',
   'g.check':'Проверка на пропечатку',
+  'g.recipe':'Рекомендации печати',
+  'recipe.hint':'Те же значения зашиты в проект .3mf. Если слайсер их не подхватил, вбей руками: имена слева совпадают с полями в поиске настроек Orca, Bambu Studio и Creality Print.',
+  'recipe.copy':'Скопировать',
+  'recipe.copied':'Скопировано',
+  'recipe.msla':[
+    'Слой 0.02–0.03 мм. FDM для такого рельефа не годится.',
+    'Смола ABS-like или Tough. Обычная «стандартная» хрупкая на тонких буквах.',
+    'Наклон 20–30 градусов, лицом от платформы, поддержки на плоскую спинку.',
+    'Anti-aliasing включить.',
+    'Экспозиция на 10–15% ниже обычной: переэкспозиция заплывает мелкий текст.',
+    'Rest time before lift 2–4 секунды, скорость подъёма снизить.',
+    'Поддержки: кончики 0.25–0.35 мм, только на спинку, плотнее по краям.',
+    'Мойка ИПС 40–60 секунд, не дольше: долгая размягчает тонкие штрихи.'
+  ],
   'g.export':'Экспорт',
   'st.stroke':'Мин. штрих',
   'st.gap':'Мин. просвет / контрформа',
@@ -625,6 +653,20 @@ en:{
   'f.pdep':'Depth',
   'hint.pocket':'A standard clutch disc is Ø10&nbsp;mm. A 10.3&nbsp;mm pocket leaves room for epoxy and sinks the disc flush so the pin does not wobble.',
   'g.check':'Printability check',
+  'g.recipe':'Print settings',
+  'recipe.hint':'The same values are embedded in the .3mf project. If your slicer did not pick them up, type them in: the names on the left match the setting search in Orca, Bambu Studio and Creality Print.',
+  'recipe.copy':'Copy',
+  'recipe.copied':'Copied',
+  'recipe.msla':[
+    'Layer 0.02-0.03 mm. FDM is not suitable for relief this fine.',
+    'Resin ABS-like or Tough. Plain standard resin is brittle on thin letters.',
+    'Tilt 20-30 degrees, face away from the plate, supports on the flat back.',
+    'Anti-aliasing on.',
+    'Exposure 10-15% below your usual value: overexposure closes up small text.',
+    'Rest time before lift 2-4 seconds, and slow the lift speed down.',
+    'Supports: 0.25-0.35 mm tips, back only, denser along the edges.',
+    'IPA wash 40-60 seconds, no longer: a long wash softens thin strokes.'
+  ],
   'g.export':'Export',
   'st.stroke':'Min. stroke',
   'st.gap':'Min. gap / counter',
@@ -799,6 +841,7 @@ function applyLang(){
     $('drop-title').textContent = loaded ? (logoFileName || t('drop.done')) : t('drop.title');
     $('drop-sub').textContent   = loaded ? t('drop.replace') : t('drop.sub');
   }
+  if(UI.recipe) UI.recipe();
   if(UI.sliders) UI.sliders();
   if(UI.printers) UI.printers();
   if(UI.flip) UI.flip();
@@ -2201,7 +2244,10 @@ function meshXML(group,bed){
   }
   const cx=(bed[0]-(maxx-minx))/2, cy=(bed[1]-(maxy-miny))/2;
   const head='<?xml version="1.0" encoding="UTF-8"?>\n'+
-    '<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">\n'+
+    '<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" xmlns:BambuStudio="http://schemas.bambulab.com/package/2021">\n'+
+    '<metadata name="Application">Pin Forge</metadata>\n'+
+    '<metadata name="BambuStudio:3mfVersion">1</metadata>\n'+
+    '<metadata name="CreationDate">'+new Date().toISOString().slice(0,10)+'</metadata>\n'+
     '<resources><object id="1" type="model"><mesh><vertices>\n';
   const verts=V.map(v=>{const c=v.split(' ');return '<vertex x="'+c[0]+'" y="'+c[1]+'" z="'+c[2]+'"/>';}).join('\n');
   const tris='\n</vertices><triangles>\n'+T.map(t=>'<triangle v1="'+t[0]+'" v2="'+t[1]+'" v3="'+t[2]+'"/>').join('\n');
@@ -2215,10 +2261,12 @@ function orcaConfig(p,pr){
   const ow=Math.min(nz, nz===0.2?0.22:0.40), iw=nz===0.2?0.25:0.45;
   const lay=nz===0.2?'0.08':'0.08';
   const c={
-    version:'1.9.0.0',
-    printer_settings_id:pr.pid, print_settings_id:'PinForge fine '+nz,
-    filament_settings_id:['PinForge PLA'], filament_type:['PLA'],
-    nozzle_diameter:[String(nz)],
+    // Без этих ключей слайсер не понимает, что перед ним проект, и молча
+    // выбрасывает весь конфиг. Уровень филамента намеренно не трогаем:
+    // неполный пресет пластика приехал бы с чужими температурами.
+    version:'1.9.0.0', from:'project', name:'project_settings',
+    printer_technology:'FFF',
+    print_settings_id:'PinForge fine '+nz,
     layer_height:lay, initial_layer_print_height:nz===0.2?'0.12':'0.2',
     line_width:String(nz===0.2?0.25:0.42),
     outer_wall_line_width:String(ow), inner_wall_line_width:String(iw),
@@ -2239,12 +2287,57 @@ function orcaConfig(p,pr){
     sparse_infill_speed:'200', internal_solid_infill_speed:'150', initial_layer_speed:'25',
     default_acceleration:'3000', outer_wall_acceleration:'1500', inner_wall_acceleration:'2000',
     top_surface_acceleration:'1500', initial_layer_acceleration:'500',
-    fan_min_speed:['100'], fan_max_speed:['100'], slow_down_layer_time:['15'],
-    close_fan_the_first_x_layers:['1'], fan_cooling_layer_time:['60'],
     enable_support:'0', brim_type:'no_brim'
   };
+  if(pr.pid) c.printer_settings_id=pr.pid;
   if(p.inv) c.brim_type='outer_only';
   return c;
+}
+
+/* Настройки обдува и пластика в проект не кладём, поэтому показываем их
+   отдельно: их выставляют руками в своём профиле филамента. */
+const COOLING = {
+  fan_min_speed:'100', fan_max_speed:'100', slow_down_layer_time:'15',
+  close_fan_the_first_x_layers:'1', fan_cooling_layer_time:'60'
+};
+
+/* Ключи, которые описывают сам файл, а не печать: в памятке они лишние. */
+const RECIPE_SKIP = ['version','from','name','printer_technology',
+                     'printer_settings_id','print_settings_id'];
+
+function recipeConfig(p){
+  const byTech = p.tech==='fdm02' ? PRINTERS.gen02 : PRINTERS.gen04;
+  const chosen = ($('fmt').value==='3mf') ? PRINTERS[$('printer').value] : null;
+  return orcaConfig(p, chosen || byTech);
+}
+
+function recipeLines(p){
+  const c=recipeConfig(p), out=[];
+  Object.keys(c).forEach(k=>{
+    if(RECIPE_SKIP.indexOf(k)>=0) return;
+    out.push([k, Array.isArray(c[k]) ? c[k].join(', ') : String(c[k])]);
+  });
+  Object.keys(COOLING).forEach(k=>out.push([k, COOLING[k]]));
+  return out;
+}
+
+function renderRecipe(){
+  const box=$('recipe'); if(!box) return;
+  const p=readParams();
+  if(p.tech==='msla'){
+    box.innerHTML = t('recipe.msla').map(x=>'<p>'+x+'</p>').join('');
+    box.className='recipe resin';
+    return;
+  }
+  box.className='recipe';
+  box.innerHTML = recipeLines(p)
+    .map(r=>'<div><span>'+r[0]+'</span><b>'+r[1]+'</b></div>').join('');
+}
+
+function recipeText(){
+  const p=readParams();
+  if(p.tech==='msla') return t('recipe.msla').join('\n');
+  return recipeLines(p).map(r=>r[0]+' = '+r[1]).join('\n');
 }
 
 function make3MF(group,p,pr){
@@ -2252,14 +2345,16 @@ function make3MF(group,p,pr){
   const ct='<?xml version="1.0" encoding="UTF-8"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'+
     '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'+
     '<Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/>'+
-    '<Default Extension="config" ContentType="application/vnd.ms-package.3dmanufacturing-config+xml"/>'+
     '<Default Extension="png" ContentType="image/png"/></Types>';
   const rels='<?xml version="1.0" encoding="UTF-8"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
     '<Relationship Target="/3D/3dmodel.model" Id="rel-1" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>';
   const ms='<?xml version="1.0" encoding="UTF-8"?>\n<config><object id="1">'+
     '<metadata key="name" value="'+logoName+'"/><metadata key="extruder" value="1"/>'+
     '<part id="1" subtype="normal_part"><metadata key="name" value="'+logoName+'"/></part></object></config>';
-  const si='<?xml version="1.0" encoding="UTF-8"?>\n<config><plate><metadata key="index" value="1"/></plate></config>';
+  const si='<?xml version="1.0" encoding="UTF-8"?>\n<config>'+
+    '<header><header_item key="X-BBL-Client-Type" value="slicer"/>'+
+    '<header_item key="X-BBL-Client-Version" value="01.09.00.15"/></header>'+
+    '<plate><metadata key="index" value="1"/></plate></config>';
   return makeZip([
     {name:'[Content_Types].xml', data:enc.encode(ct)},
     {name:'_rels/.rels', data:enc.encode(rels)},
@@ -2424,7 +2519,7 @@ function wire(){
     refresh();
   });
   ['mode','inv','mount','insert','seat','lid','lidon','autoth','zone','bd','bh','bsp','pd','pdep','ox','oy','lx','ly','plate','solid','tech'].forEach(id=>$(id).addEventListener('input',()=>{
-    syncRows(); refresh();
+    syncRows(); renderRecipe(); refresh();
   }));
   function syncRows(){
     const mv=$('mode').value, mt=$('mount').value;
@@ -2497,8 +2592,31 @@ function wire(){
     const f=$('fmt').value;
     document.querySelectorAll('[data-fmt]').forEach(r=>{ r.style.display = r.dataset.fmt===f?'':'none'; });
     $('dl').textContent = f==='3mf' ? t('dl.3mf') : t('dl.zip');
+    renderRecipe();
   };
   UI.fmt=syncFmt;
+  UI.recipe=renderRecipe;
+  psel.addEventListener('change',renderRecipe);
+  $('recipe-copy').addEventListener('click',async()=>{
+    const btn=$('recipe-copy'), txt=recipeText();
+    let ok=false;
+    try{ await navigator.clipboard.writeText(txt); ok=true; }
+    catch(e){
+      // в песочнице буфер может быть закрыт, тогда старый способ
+      try{
+        const ta=document.createElement('textarea');
+        ta.value=txt; ta.setAttribute('readonly','');
+        ta.style.cssText='position:fixed;left:-9999px;top:0';
+        document.body.appendChild(ta); ta.select();
+        ok=document.execCommand('copy');
+        ta.remove();
+      }catch(e2){ ok=false; }
+    }
+    if(ok){
+      btn.textContent=t('recipe.copied');
+      setTimeout(()=>{ btn.textContent=t('recipe.copy'); },1500);
+    }
+  });
   $('fmt').addEventListener('change',()=>{
     if($('fmt').value==='3mf'){
       const t=$('tech').value;
