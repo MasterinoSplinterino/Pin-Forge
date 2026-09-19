@@ -86,19 +86,24 @@ number of perimeters.
 
 ## 3mf export
 
-The project carries the process settings: layer height, Arachne, compensations,
-speeds, accelerations, ironing, scarf joint. The printer profile name is written
-as a plain string (`PRINTERS` in the code). If your preset is named differently,
-the process settings still apply and the printer stays the current one.
+Slicers in the Bambu and Orca family apply settings from a project only when two
+things hold. The model has to declare itself as one of their projects, which it
+now does, and the embedded profile has to be **complete**. A partial profile is
+discarded without a word, and `inherits` is not honoured here, so pointing at an
+installed preset does not help. This was verified against Creality Print.
 
-Cooling and filament are deliberately left out. They belong to the filament
-preset, and a half-filled one would arrive carrying default temperatures, which
-is the wrong thing to hand a printer. The Print settings section lists the
-cooling values so you can enter them in your own filament profile.
+A generator cannot invent a complete profile, because it does not know which
+presets you have installed. So it borrows yours. Save any project from your
+slicer with Save project as, load that file under **Base profile** in the export
+section, and every `.3mf` from then on carries your full profile with the
+generator values swapped in: layer height, Arachne, compensations, speeds,
+accelerations, ironing, scarf joint and cooling. The printer, bed and filament
+presets stay exactly as they were in your file.
 
-For a slicer to read any of this the model has to declare itself as a project of
-the Bambu and Orca family. Without that marker the file imports as bare geometry
-and the whole profile is dropped in silence.
+The profile is read straight out of the `.3mf` in the browser and kept in local
+storage. A plain `.json` process export works too. Without a base profile the
+export still carries the geometry and the generator settings, but expect the
+slicer to ignore them and use the Print settings section instead.
 
 ## Adding a language
 

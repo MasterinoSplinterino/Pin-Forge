@@ -342,6 +342,12 @@
         </select></div>
       <div class="row" data-fmt="3mf"><label for="printer" data-i18n="f.printer"></label>
         <select id="printer" style="width:170px"></select></div>
+      <div class="row" data-fmt="3mf"><label for="basebtn" data-i18n="f.base"></label>
+        <button type="button" id="basebtn" style="padding:4px 9px;font-size:11px" data-i18n="base.pick"></button>
+        <input type="file" id="basefile" accept=".3mf,.json,.config" hidden></div>
+      <div class="row" data-fmt="3mf"><span class="hint" id="basename" style="flex:1;margin:0"></span>
+        <button type="button" id="baseclear" style="padding:2px 8px;font-size:11px" data-i18n="base.clear"></button></div>
+      <div class="hint" data-fmt="3mf" data-i18n="base.hint"></div>
       <button class="primary" id="dl" disabled></button>
       <div class="hint" data-i18n="hint.zip"></div>
     </details>
@@ -461,6 +467,15 @@ ru:{
   'fmt.zip':'STL + памятка (ZIP)',
   'fmt.3mf':'Проект Orca / Bambu (.3mf)',
   'f.printer':'Принтер',
+  'f.base':'Базовый профиль',
+  'base.pick':'Загрузить',
+  'base.clear':'убрать',
+  'base.none':'не задан, настройки в проект не поедут',
+  'base.loaded':(nm,n)=>nm+', '+n+' ключей',
+  'base.hint':'Слайсер применяет настройки из проекта, только если профиль в нём полный. Сохрани в слайсере любой проект командой «Сохранить проект как», выбери этот файл здесь, и генератор будет класть твой профиль целиком, подменяя в нём свои значения. Настройка разовая, файл остаётся в браузере.',
+  'msg.baseOk':(nm,n)=>'Базовый профиль принят: '+nm+', '+n+' ключей. Теперь настройки поедут в .3mf.',
+  'msg.baseThin':n=>'В файле всего '+n+' ключей, для полного профиля мало. Сохрани проект целиком через «Сохранить проект как».',
+  'msg.baseFail':e=>'Не удалось прочитать профиль: '+e,
   'hint.zip':'В архиве: модель + памятка по печати на фотополимернике.',
   'u.mm':'мм',
 
@@ -679,6 +694,15 @@ en:{
   'fmt.zip':'STL + notes (ZIP)',
   'fmt.3mf':'Orca / Bambu project (.3mf)',
   'f.printer':'Printer',
+  'f.base':'Base profile',
+  'base.pick':'Load',
+  'base.clear':'clear',
+  'base.none':'not set, settings will not travel in the project',
+  'base.loaded':(nm,n)=>nm+', '+n+' keys',
+  'base.hint':'A slicer only applies settings from a project when the profile inside it is complete. Save any project from your slicer with Save project as, pick that file here, and the generator will embed your whole profile with its own values swapped in. One-time setup, the file stays in your browser.',
+  'msg.baseOk':(nm,n)=>'Base profile accepted: '+nm+', '+n+' keys. Settings will now travel in the .3mf.',
+  'msg.baseThin':n=>'That file holds only '+n+' keys, too few for a full profile. Save the whole project with Save project as.',
+  'msg.baseFail':e=>'Could not read the profile: '+e,
   'hint.zip':'The archive holds the model plus notes on resin printing.',
   'u.mm':'mm',
 
@@ -2294,8 +2318,99 @@ function orcaConfig(p,pr){
   return c;
 }
 
-/* Настройки обдува и пластика в проект не кладём, поэтому показываем их
-   отдельно: их выставляют руками в своём профиле филамента. */
+/* Профиль слайсера, загруженный пользователем. Без него в проект едут
+   только наши ключи, а слайсер такой конфиг молча выбрасывает: ему нужен
+   полный профиль. Проверено на Creality Print, наследование через inherits
+   он игнорирует. */
+let baseProfile=null, baseName='';
+try{
+  const raw=localStorage.getItem('pinforge.base');
+  if(raw){ const o=JSON.parse(raw); baseProfile=o.cfg; baseName=o.name||''; }
+}catch(e){ baseProfile=null; }
+
+/* Ключи, описывающие сам файл и пресеты: их берём из чужого профиля как есть. */
+const BASE_KEEP=['version','from','name','printer_technology',
+                 'printer_settings_id','print_settings_id'];
+
+function mergedConfig(p,pr){
+  const ours=orcaConfig(p,pr);
+  if(!baseProfile) return ours;
+  const out=Object.assign({},baseProfile);
+  Object.keys(ours).forEach(k=>{ if(BASE_KEEP.indexOf(k)<0) out[k]=ours[k]; });
+  // с полным профилем обдув можно вернуть в проект: пресет пластика целый
+  Object.keys(COOLING).forEach(k=>{
+    out[k] = Array.isArray(out[k]) && out[k].length
+      ? out[k].map(()=>COOLING[k])
+      : [COOLING[k]];
+  });
+  return out;
+}
+
+/* Минимальный читатель zip: из .3mf нужен ровно один файл. */
+function unzipFind(buf,wanted){
+  const dv=new DataView(buf), u8=new Uint8Array(buf), dec=new TextDecoder();
+  let eocd=-1;
+  for(let i=u8.length-22;i>=0 && i>u8.length-66000;i--){
+    if(dv.getUint32(i,true)===0x06054b50){ eocd=i; break; }
+  }
+  if(eocd<0) throw new Error('not a zip');
+  const count=dv.getUint16(eocd+10,true);
+  let off=dv.getUint32(eocd+16,true);
+  for(let n=0;n<count;n++){
+    if(dv.getUint32(off,true)!==0x02014b50) break;
+    const method=dv.getUint16(off+10,true);
+    const csize=dv.getUint32(off+20,true);
+    const nlen=dv.getUint16(off+28,true);
+    const elen=dv.getUint16(off+30,true);
+    const clen=dv.getUint16(off+32,true);
+    const lho=dv.getUint32(off+42,true);
+    const name=dec.decode(u8.subarray(off+46,off+46+nlen));
+    if(name===wanted){
+      const lnlen=dv.getUint16(lho+26,true), lelen=dv.getUint16(lho+28,true);
+      const start=lho+30+lnlen+lelen;
+      const raw=u8.subarray(start,start+csize);
+      if(method===0) return dec.decode(raw);
+      if(method===8 && typeof pako!=='undefined') return dec.decode(pako.inflateRaw(raw));
+      throw new Error('compression '+method);
+    }
+    off += 46+nlen+elen+clen;
+  }
+  return null;
+}
+
+function renderBase(){
+  const el=$('basename'), btn=$('baseclear');
+  if(!el) return;
+  el.textContent = baseProfile ? t('base.loaded',baseName,Object.keys(baseProfile).length)
+                               : t('base.none');
+  if(btn) btn.style.display = baseProfile ? '' : 'none';
+}
+
+async function useBaseFile(file){
+  try{
+    let txt;
+    if(/\.3mf$/i.test(file.name)){
+      txt=unzipFind(await file.arrayBuffer(),'Metadata/project_settings.config');
+      if(!txt) throw new Error('project_settings.config');
+    } else {
+      txt=await file.text();
+    }
+    const cfg=JSON.parse(txt);
+    if(!cfg || typeof cfg!=='object' || Array.isArray(cfg)) throw new Error('JSON');
+    const n=Object.keys(cfg).length;
+    if(n<120){ say(()=>t('msg.baseThin',n)); return; }
+    baseProfile=cfg; baseName=file.name;
+    try{ localStorage.setItem('pinforge.base',JSON.stringify({name:baseName,cfg:cfg})); }catch(e){}
+    renderBase();
+    say(()=>t('msg.baseOk',baseName,n),true);
+  }catch(e){
+    const m=e && e.message || String(e);
+    say(()=>t('msg.baseFail',m));
+  }
+}
+
+/* Настройки обдува показываем отдельно: без базового профиля они в проект
+   не едут, их выставляют руками в своём профиле филамента. */
 const COOLING = {
   fan_min_speed:'100', fan_max_speed:'100', slow_down_layer_time:'15',
   close_fan_the_first_x_layers:'1', fan_cooling_layer_time:'60'
@@ -2361,7 +2476,7 @@ function make3MF(group,p,pr){
     {name:'3D/3dmodel.model', data:enc.encode(meshXML(group,pr.bed))},
     {name:'Metadata/model_settings.config', data:enc.encode(ms)},
     {name:'Metadata/slice_info.config', data:enc.encode(si)},
-    {name:'Metadata/project_settings.config', data:enc.encode(JSON.stringify(orcaConfig(p,pr),null,2))}
+    {name:'Metadata/project_settings.config', data:enc.encode(JSON.stringify(mergedConfig(p,pr),null,2))}
   ]);
 }
 
@@ -2595,7 +2710,19 @@ function wire(){
     renderRecipe();
   };
   UI.fmt=syncFmt;
-  UI.recipe=renderRecipe;
+  UI.recipe=()=>{ renderRecipe(); renderBase(); };
+  $('basebtn').addEventListener('click',()=>$('basefile').click());
+  $('basefile').addEventListener('change',e=>{
+    const f=e.target.files[0];
+    if(f) useBaseFile(f);
+    e.target.value='';
+  });
+  $('baseclear').addEventListener('click',()=>{
+    baseProfile=null; baseName='';
+    try{ localStorage.removeItem('pinforge.base'); }catch(e){}
+    renderBase();
+  });
+  renderBase();
   psel.addEventListener('change',renderRecipe);
   $('recipe-copy').addEventListener('click',async()=>{
     const btn=$('recipe-copy'), txt=recipeText();
