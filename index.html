@@ -71,6 +71,9 @@
   .viewbtns{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}
   .viewbtns button{padding:2px 8px;font-size:11px;line-height:1.5}
   .viewbtns button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+  .lightpre{gap:6px}
+  .lightpre button{padding:3px 9px;font-size:11px}
+  .lightpre button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:transparent}
   #s-warn{flex-basis:100%;order:9;font-size:11.5px;line-height:1.35;
     color:var(--warn);background:var(--warn-bg);padding:6px 8px;border-radius:6px}
   #s-warn:empty{display:none}
@@ -208,6 +211,22 @@
         <option value="fdm04" data-i18n="tech.fdm04"></option>
         <option value="msla" data-i18n="tech.msla"></option>
       </select>
+    </details>
+
+    <details class="grp" id="grp-light" open>
+      <summary data-i18n="g.light"></summary>
+      <div class="row rowend lightpre">
+        <button type="button" id="lp-soft" data-i18n="light.soft"></button>
+        <button type="button" id="lp-hard" data-i18n="light.hard"></button>
+        <button type="button" id="lp-graze" data-i18n="light.graze"></button>
+      </div>
+      <div class="row"><label for="lel" data-i18n="f.lightEl"></label>
+        <input type="range" id="lel" min="6" max="85" step="1" value="49">
+        <span class="val" id="v-lel"></span></div>
+      <div class="row"><label for="laz" data-i18n="f.lightAz"></label>
+        <input type="range" id="laz" min="0" max="355" step="5" value="232">
+        <span class="val" id="v-laz"></span></div>
+      <div class="hint" data-i18n="hint.light"></div>
     </details>
 
     <details class="grp" id="grp-base" open>
@@ -404,6 +423,13 @@ ru:{
   'tech.fdm02':'FDM, сопло 0.2 мм',
   'tech.fdm04':'FDM, сопло 0.4 мм',
   'tech.msla':'Фотополимер MSLA',
+  'g.light':'Свет',
+  'f.lightEl':'Угол',
+  'f.lightAz':'Поворот',
+  'light.soft':'Мягкий',
+  'light.hard':'Контраст',
+  'light.graze':'Скользящий',
+  'hint.light':'Только превью, на модель не влияет. Тонкий штрих читается при низком угле: свет идёт почти вдоль поверхности, и буквы отбрасывают длинную тень. Поворот подбирают так, чтобы тень ложилась поперёк штриха.',
   'g.base':'Основание',
   'f.shape':'Форма',
   'shape.disc':'Круглая плашка',
@@ -631,6 +657,13 @@ en:{
   'tech.fdm02':'FDM, 0.2 mm nozzle',
   'tech.fdm04':'FDM, 0.4 mm nozzle',
   'tech.msla':'MSLA resin',
+  'g.light':'Light',
+  'f.lightEl':'Angle',
+  'f.lightAz':'Rotation',
+  'light.soft':'Soft',
+  'light.hard':'Contrast',
+  'light.graze':'Grazing',
+  'hint.light':'Preview only, the model is untouched. Fine strokes read at a low angle: the light runs almost along the surface and the letters throw a long shadow. Pick a rotation that lays the shadow across the stroke, not along it.',
   'g.base':'Base',
   'f.shape':'Shape',
   'shape.disc':'Round disc',
@@ -882,6 +915,7 @@ function applyLang(){
     $('drop-title').textContent = loaded ? (logoFileName || t('drop.done')) : t('drop.title');
     $('drop-sub').textContent   = loaded ? t('drop.replace') : t('drop.sub');
   }
+  if(UI.light) UI.light();
   if(UI.recipe) UI.recipe();
   if(UI.sliders) UI.sliders();
   if(UI.printers) UI.printers();
@@ -1998,7 +2032,28 @@ function buildPin(p){
 }
 
 /* ============ сцена ============ */
-let renderer,scene,camera,pivot,current,raf,keyLight,lightBelow=false;
+let renderer,scene,camera,pivot,current,raf,keyLight,ambLight,lightBelow=false;
+
+/* Свет только для превью. Тонкий рельеф читается при низком угле: скользящий
+   свет даёт длинную тень и подсвечивает боковые стенки букв. */
+const LIGHT_PRESETS={
+  soft :{el:49, az:232, amb:0.34, key:1.05},
+  hard :{el:34, az:214, amb:0.17, key:1.25},
+  graze:{el:13, az:198, amb:0.10, key:1.45}
+};
+let lightEl=49, lightAz=232, lightAmb=0.34, lightKey=1.05;
+try{
+  const o=JSON.parse(localStorage.getItem('pinforge.light')||'null');
+  if(o && typeof o.el==='number'){ lightEl=o.el; lightAz=o.az; lightAmb=o.amb; lightKey=o.key; }
+}catch(e){}
+
+function applyLight(){
+  if(ambLight) ambLight.intensity=lightAmb;
+  if(keyLight) keyLight.intensity=lightKey;
+  fitShadow(lastSpan||46);
+  try{ localStorage.setItem('pinforge.light',
+    JSON.stringify({el:lightEl,az:lightAz,amb:lightAmb,key:lightKey})); }catch(e){}
+}
 
 /* Рамка карты теней считается от габарита модели: слишком широкая даёт
    рваные края, слишком узкая обрезает тень. */
@@ -2007,7 +2062,9 @@ function fitShadow(span){
   const r=Math.max(14,span*0.8);
   const d=Math.max(70,span*2.4);
   // со спинки свет уводим под модель, иначе задняя плоскость уходит в плоский серый
-  keyLight.position.set(-0.40*d,-0.52*d,(lightBelow?-0.76:0.76)*d);
+  const el=lightEl*Math.PI/180, az=lightAz*Math.PI/180, hz=Math.cos(el);
+  keyLight.position.set(hz*Math.cos(az)*d, hz*Math.sin(az)*d,
+                        (lightBelow?-1:1)*Math.sin(el)*d);
   const c=keyLight.shadow.camera;
   c.left=-r; c.right=r; c.top=r; c.bottom=-r;
   c.near=d*0.15; c.far=d*2.6;
@@ -2026,8 +2083,9 @@ function initScene(){
   camera.lookAt(0,0,0);
   pivot=new THREE.Group();
   scene.add(pivot);
-  scene.add(new THREE.AmbientLight(0xffffff,0.34));
-  keyLight=new THREE.DirectionalLight(0xffffff,1.05);
+  ambLight=new THREE.AmbientLight(0xffffff,lightAmb);
+  scene.add(ambLight);
+  keyLight=new THREE.DirectionalLight(0xffffff,lightKey);
   keyLight.castShadow=true;
   keyLight.shadow.mapSize.set(2048,2048);
   keyLight.shadow.bias=-0.0009;
@@ -2850,6 +2908,30 @@ function wire(){
   document.querySelectorAll('[data-lang]').forEach(b=>{
     b.addEventListener('click',()=>setLang(b.dataset.lang));
   });
+
+  const lelI=$('lel'), lazI=$('laz');
+  const lightLabels=()=>{
+    $('v-lel').textContent=lightEl+'\u00B0';
+    $('v-laz').textContent=lightAz+'\u00B0';
+    Object.keys(LIGHT_PRESETS).forEach(k=>{
+      const b=$('lp-'+k), p=LIGHT_PRESETS[k];
+      if(b) b.setAttribute('aria-pressed',
+        (p.el===lightEl && p.az===lightAz && p.amb===lightAmb) ? 'true' : 'false');
+    });
+  };
+  const syncLight=()=>{ lelI.value=lightEl; lazI.value=lightAz; lightLabels(); };
+  UI.light=lightLabels;
+  lelI.addEventListener('input',()=>{ lightEl=+lelI.value; lightLabels(); applyLight(); });
+  lazI.addEventListener('input',()=>{ lightAz=+lazI.value; lightLabels(); applyLight(); });
+  Object.keys(LIGHT_PRESETS).forEach(k=>{
+    const b=$('lp-'+k); if(!b) return;
+    b.addEventListener('click',()=>{
+      const p=LIGHT_PRESETS[k];
+      lightEl=p.el; lightAz=p.az; lightAmb=p.amb; lightKey=p.key;
+      syncLight(); applyLight();
+    });
+  });
+  syncLight(); applyLight();
 }
 
 (function pickLang(){
