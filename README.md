@@ -23,6 +23,10 @@ The interface is bilingual, English and Russian, with a switch in the header.
   cut to the outline of the letters themselves.
 - **A socket for the hardware** — butterfly clutch pin or a magnet, recessed,
   glued onto a pad, or sunk under a printed lid with a pause in the print.
+- **A keychain hole** — instead of the socket: a hole for a split ring on the
+  left or right, either in free room inside the plate (a rectangle grows
+  longer for it) or on a tab outside that blends into the plate with a rounded joint;
+  diameter, rim width and position are adjustable.
 - **A printability check** — the thinnest stroke and the narrowest gap are
   measured against the selected process, with a map of the spots that will not
   come out and concrete advice on how to fix them.

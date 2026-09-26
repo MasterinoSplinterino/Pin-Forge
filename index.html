@@ -114,6 +114,12 @@
   details.grp[open]>summary::before{transform:rotate(45deg) translate(-1px,-1px)}
   details.grp>summary:hover{color:var(--ink)}
   details.grp>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+  details.sub{margin:10px 0 2px;padding:8px 0 0;border-top:1px dashed var(--line)}
+  details.sub>summary{cursor:pointer;list-style:none;font-size:12px;color:var(--muted);padding:2px 0 6px}
+  details.sub>summary::-webkit-details-marker{display:none}
+  details.sub>summary::before{content:"+ ";color:var(--accent);font-weight:600}
+  details.sub[open]>summary::before{content:"\2212  "}
+  details.sub>summary:hover{color:var(--ink)}
   .statsep{margin-top:10px;padding-top:9px;border-top:1px solid var(--line)}
   .recipe{margin-top:9px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px}
   .recipe>div{display:flex;justify-content:space-between;gap:10px;padding:1.5px 0;min-width:0}
@@ -298,56 +304,92 @@
 
     <details class="grp" id="grp-mount" open>
       <summary data-i18n="g.mount"></summary>
-      <div class="row"><label for="insert" data-i18n="f.insert"></label>
-        <select id="insert">
-          <option value="needle" data-i18n="ins.needle"></option>
+      <div class="row"><label for="mtype" data-i18n="f.mtype"></label>
+        <select id="mtype">
+          <option value="needle" selected data-i18n="mtype.needle"></option>
+          <option value="magnet" data-i18n="mtype.magnet"></option>
+          <option value="ring" data-i18n="mtype.ring"></option>
+          <option value="none" data-i18n="mtype.none"></option>
+        </select></div>
+
+      <div class="row" data-mt="magnet"><label for="msize" data-i18n="f.msize"></label>
+        <select id="msize">
           <option value="mag5" data-i18n="ins.mag5"></option>
-          <option value="mag6" data-i18n="ins.mag6"></option>
+          <option value="mag6" selected data-i18n="ins.mag6"></option>
           <option value="mag8" data-i18n="ins.mag8"></option>
           <option value="custom" data-i18n="ins.custom"></option>
         </select></div>
-      <div class="row"><label for="wall" data-i18n="f.wall"></label>
-        <input type="range" id="wall" min="0.4" max="3" step="0.1" value="1.3">
-        <span class="val" id="v-wall"></span></div>
-      <div class="row"><label for="fwall" data-i18n="f.fwall"></label>
-        <input type="range" id="fwall" min="0.3" max="2.5" step="0.1" value="0.8">
-        <span class="val" id="v-fwall"></span></div>
-      <div class="row"><label for="autoth" data-i18n="f.autoth"></label>
-        <input type="checkbox" id="autoth" checked></div>
-      <div class="row"><label for="zone" data-i18n="f.zone"></label>
-        <input type="number" id="zone" class="n1" value="6" step="1" min="0" max="60"> <span class="val" data-i18n="u.mm"></span></div>
-      <div class="row"><label for="ox" data-i18n="f.off"></label>
-        <input type="number" id="ox" class="n2" value="0" step="0.5">
-        <input type="number" id="oy" class="n2" value="0" step="0.5"></div>
-      <div class="row"><label for="seat" data-i18n="f.seat"></label>
-        <select id="seat">
-          <option value="socket" data-i18n="seat.socket"></option>
-          <option value="flat" data-i18n="seat.flat"></option>
+      <div class="row" data-mt="needle magnet"><label for="mcount" data-i18n="f.mcount"></label>
+        <select id="mcount">
+          <option value="1" selected data-i18n="cnt.1"></option>
+          <option value="2" data-i18n="cnt.2"></option>
         </select></div>
-      <div class="row" data-seat="flat"><label for="bh" data-i18n="f.bh"></label>
+      <div class="row" data-mt="needle magnet" data-cnt="2"><label for="bsp" data-i18n="f.bsp"></label>
+        <input type="number" id="bsp" class="n1" value="" step="1" min="6" max="120" data-i18n-ph="ph.auto"> <span class="val" data-i18n="u.mm"></span></div>
+      <div class="row" data-mt="needle"><label for="nseat" data-i18n="f.seat"></label>
+        <select id="nseat">
+          <option value="pocket" selected data-i18n="nseat.pocket"></option>
+          <option value="inset" data-i18n="nseat.inset"></option>
+          <option value="flat" data-i18n="nseat.flat"></option>
+        </select></div>
+      <div class="row" data-mt="magnet"><label for="gseat" data-i18n="f.seat"></label>
+        <select id="gseat">
+          <option value="socket" selected data-i18n="gseat.socket"></option>
+          <option value="lid" data-i18n="gseat.lid"></option>
+          <option value="flat" data-i18n="gseat.flat"></option>
+        </select></div>
+      <div class="row" data-mt="magnet" data-gseat="lid"><label for="lid" data-i18n="f.lid"></label>
+        <input type="number" id="lid" class="n1" value="0.4" step="0.1" min="0.2" max="1.5"> <span class="val" data-i18n="u.mm"></span></div>
+      <div class="row" data-mt="needle magnet"><label for="pd" data-i18n="f.pd"></label>
+        <input type="number" id="pd" class="n1" value="10.3" step="0.1" min="2" max="20"> <span class="val" data-i18n="u.mm"></span></div>
+      <div class="row" data-mt="needle magnet"><label for="pdep" data-i18n="f.pdep"></label>
+        <input type="number" id="pdep" class="n1" value="0.6" step="0.05" min="0.2" max="6"> <span class="val" data-i18n="u.mm"></span></div>
+      <div class="row" data-mt="needle magnet" data-flat><label for="bh" data-i18n="f.bh"></label>
         <input type="number" id="bh" class="n1" value="0.8" step="0.1" min="0.3" max="3"> <span class="val" data-i18n="u.mm"></span></div>
-      <div class="row" data-ins="mag"><label for="lidon" data-i18n="f.lidon"></label>
-        <input type="checkbox" id="lidon">
-        <input type="number" id="lid" class="n2" value="0.4" step="0.1" min="0.2" max="1.5"></div>
-      <div class="row"><label for="mount" data-i18n="f.mount"></label>
-        <select id="mount">
-          <option value="auto" selected data-i18n="mount.auto"></option>
-          <option value="pocket" data-i18n="mount.pocket"></option>
-          <option value="inset" data-i18n="mount.inset"></option>
-          <option value="boss" data-i18n="mount.boss"></option>
-          <option value="boss2" data-i18n="mount.boss2"></option>
-          <option value="none" data-i18n="mount.none"></option>
-        </select></div>
+      <div class="hint" data-mt="needle" data-i18n-html="hint.needle"></div>
+      <div class="hint" data-mt="magnet" data-i18n-html="hint.magnet"></div>
+      <details class="sub" data-mt="needle magnet">
+        <summary data-i18n="g.fine"></summary>
+        <div class="row"><label for="wall" data-i18n="f.wall"></label>
+          <input type="range" id="wall" min="0.4" max="3" step="0.1" value="1.3">
+          <span class="val" id="v-wall"></span></div>
+        <div class="row"><label for="fwall" data-i18n="f.fwall"></label>
+          <input type="range" id="fwall" min="0.3" max="2.5" step="0.1" value="0.8">
+          <span class="val" id="v-fwall"></span></div>
+        <div class="row"><label for="autoth" data-i18n="f.autoth"></label>
+          <input type="checkbox" id="autoth" checked></div>
+        <div class="row" data-nseat="pocket"><label for="bd" data-i18n="f.bd"></label>
+          <input type="number" id="bd" class="n1" value="0" step="0.5" min="0" max="30"> <span class="val" data-i18n="u.mm"></span></div>
+        <div class="row"><label for="zone" data-i18n="f.zone"></label>
+          <input type="number" id="zone" class="n1" value="6" step="1" min="0" max="60"> <span class="val" data-i18n="u.mm"></span></div>
+        <div class="row"><label for="ox" data-i18n="f.off"></label>
+          <input type="number" id="ox" class="n2" value="0" step="0.5">
+          <input type="number" id="oy" class="n2" value="0" step="0.5"></div>
+      </details>
 
-      <div class="row" data-mount="bossmanual"><label for="bd" data-i18n="f.bd"></label>
-        <input type="number" id="bd" class="n1" value="12.5" step="0.5" min="5" max="30"> <span class="val" data-i18n="u.mm"></span></div>
-      <div class="row" data-mount="boss2manual"><label for="bsp" data-i18n="f.bsp"></label>
-        <input type="number" id="bsp" class="n1" value="16" step="1" min="6" max="120"> <span class="val" data-i18n="u.mm"></span></div>
-      <div class="row"><label for="pd" data-i18n="f.pd"></label>
-        <input type="number" id="pd" class="n1" value="10.3" step="0.1" min="4" max="20"> <span class="val" data-i18n="u.mm"></span></div>
-      <div class="row"><label for="pdep" data-i18n="f.pdep"></label>
-        <input type="number" id="pdep" class="n1" value="0.6" step="0.05" min="0.2" max="2"> <span class="val" data-i18n="u.mm"></span></div>
-      <div class="hint" data-i18n-html="hint.pocket"></div>
+      <div class="row" data-mt="ring"><label for="loopside" data-i18n="f.loopside"></label>
+        <select id="loopside">
+          <option value="left" selected data-i18n="loop.left"></option>
+          <option value="right" data-i18n="loop.right"></option>
+        </select></div>
+      <div class="row" data-mt="ring"><label for="loopin" data-i18n="f.loopin"></label>
+        <select id="loopin">
+          <option value="in" selected data-i18n="loopin.in"></option>
+          <option value="out" data-i18n="loopin.out"></option>
+        </select></div>
+      <div class="row" data-mt="ring"><label for="loopd" data-i18n="f.loopd"></label>
+        <input type="number" id="loopd" class="n1" value="4.5" step="0.5" min="2" max="15"> <span class="val" data-i18n="u.mm"></span></div>
+      <div class="row" data-mt="ring"><label for="loopw" data-i18n="f.loopw"></label>
+        <input type="number" id="loopw" class="n1" value="2.5" step="0.1" min="1" max="8"> <span class="val" data-i18n="u.mm"></span></div>
+      <div class="row" data-mt="ring"><label for="loopf" data-i18n="f.loopf"></label>
+        <input type="number" id="loopf" class="n1" value="2" step="0.5" min="0" max="10"> <span class="val" data-i18n="u.mm"></span></div>
+      <div class="row" data-mt="ring"><label for="lox" data-i18n="f.loopoff"></label>
+        <input type="number" id="lox" class="n2" value="0" step="0.5">
+        <input type="number" id="loy" class="n2" value="0" step="0.5"></div>
+      <div class="row rowend" data-mt="ring">
+        <button type="button" id="loopreset" style="padding:3px 9px;font-size:11px" data-i18n="loop.reset"></button></div>
+      <div class="hint" data-mt="ring" data-i18n="hint.loop"></div>
+      <div class="hint" data-mt="none" data-i18n="hint.none"></div>
     </details>
 
     <details class="grp" id="grp-check">
@@ -459,8 +501,32 @@ ru:{
   'f.inv':'Врезать буквы внутрь (печать лицом вниз)',
   'hint.grow':'Утолщение — грубый offset по нормали контура. Помогает, если у лого тонкие штрихи; больше 0.2&nbsp;мм может слипать соседние буквы.',
   'g.mount':'Крепление',
-  'f.insert':'Вставка',
-  'ins.needle':'Игла-бабочка Ø10×0.5',
+  'f.mtype':'Тип',
+  'mtype.needle':'Игла-бабочка',
+  'mtype.magnet':'Магнит',
+  'mtype.ring':'Кольцо для брелока',
+  'mtype.none':'Без крепления, плоская спинка',
+  'f.msize':'Размер магнита',
+  'f.mcount':'Количество',
+  'cnt.1':'Одно',
+  'cnt.2':'Два (для широких значков)',
+  'ph.auto':'авто',
+  'nseat.pocket':'Утопить в карман',
+  'nseat.inset':'Только гнездо, без площадки',
+  'nseat.flat':'Приклеить на спинку',
+  'gseat.socket':'Утопить в гнездо',
+  'gseat.lid':'Спрятать под крышку (пауза в печати)',
+  'gseat.flat':'Приклеить на спинку',
+  'f.lid':'Толщина крышки',
+  'g.fine':'Тонкая настройка',
+  'f.loopoff':'Сдвиг кольца X / Y',
+  'f.loopf':'Скругление стыка ушка',
+  'loop.reset':'вернуть на место',
+  'hint.needle':'Пятак иглы — Ø10&nbsp;мм. Карман 10.3&nbsp;мм даёт зазор под эпоксидку и утапливает диск заподлицо. Если тело тоньше кармана, снизу вырастет площадка.',
+  'hint.magnet':'Под крышкой магнит спрятан внутри: печать встанет на паузу, вложи магнит и продолжи. Приклеивать магниты — только в паре с ответным, так полярность выставится сама.',
+  'hint.none':'Спинка остаётся ровной: клей, скотч или просто сувенир.',
+  'w.loopClamp':'Сдвиг уводил отверстие на букву или за край плашки, оставил ближайшее допустимое место.',
+  'w.loopEdge':v=>'Ободок между отверстием и краем '+v+' мм, кольцо может его разорвать.',
   'ins.mag5':'Магнит 5×2 мм',
   'ins.mag6':'Магнит 6×3 мм',
   'ins.mag8':'Магнит 8×3 мм',
@@ -471,22 +537,28 @@ ru:{
   'f.zone':'Зона поиска гнезда ±',
   'f.off':'Сдвиг гнезда X / Y',
   'f.seat':'Посадка',
-  'seat.socket':'В гнездо, утопить',
-  'seat.flat':'На площадку, приклеить',
   'f.bh':'Высота площадки',
-  'f.lidon':'Закрыть крышкой (пауза в печати)',
-  'f.mount':'Крепление',
-  'mount.auto':'Авто: карман или площадка',
-  'mount.pocket':'Карман в основании',
-  'mount.inset':'Только гнездо, без площадки',
-  'mount.boss':'Площадка на спинке',
-  'mount.boss2':'Две площадки на спинке',
-  'mount.none':'Плоская спинка',
-  'f.bd':'Ø площадки (мин.)',
+  'f.loopside':'Сторона',
+  'loop.left':'Слева',
+  'loop.right':'Справа',
+  'f.loopd':'Ø отверстия',
+  'f.loopw':'Ширина ободка',
+  'hint.loop':'Отверстие под разъёмное кольцо. Сдвигом X / Y его можно переставить: генератор не пустит его на буквы и за край. Внутри плашки оно ставится на свободное место у выбранного края, прямоугольник при нехватке места удлиняется. Для стандартного кольца Ø25 мм из проволоки 1.2–1.5 мм хватает отверстия 4–5 мм. Ободок тоньше 2 мм кольцо со временем перетирает.',
+  'mt.loop':(side,d,w)=>'кольцо '+side+', отверстие Ø'+d+' мм, ободок '+w+' мм',
+  'loop.l':'слева', 'loop.r':'справа',
+  'f.loopin':'Расположение',
+  'loopin.in':'Внутри плашки',
+  'loopin.out':'Снаружи, ушком',
+  'mt.loopIn':' · внутри плашки',
+  'w.loopNoRoom':'В плашке нет свободного места под отверстие с ободком, кольцо вынесено наружу ушком. Увеличь плашку, уменьши лого или отверстие.',
+  'w.loopFlatDisc':'С отверстием внутри круглая плашка строится без купола.',
+  'w.loopCut':'Плашка по контуру облегает буквы, свободного места под отверстие в ней нет, поэтому кольцо вынесено наружу ушком. Чтобы отверстие было внутри, возьми скруглённый прямоугольник: он сам удлинится под кольцо.',
+  'w.loopThin':v=>'Ободок ушка '+v+' мм: кольцо перетрёт его или разогнёт. Ставь от 2 мм.',
+  'w.loopBlock':'У края буква или её контрформа, хвост ушка упёрся в неё и заходит в плашку неглубоко. Если ушко держится слабо — увеличь кант или сдвинь логотип.',
+  'f.bd':'Ø площадки, мин. (0 — по гнезду)',
   'f.bsp':'Разнос центров',
-  'f.pd':'Ø гнезда',
-  'f.pdep':'Глубина',
-  'hint.pocket':'Пятак на фото — Ø10&nbsp;мм. Карман 10.3&nbsp;мм даёт зазор под эпоксидку и утапливает диск заподлицо, чтобы значок не болтался.',
+  'f.pd':'Ø гнезда под вставку',
+  'f.pdep':'Глубина / высота вставки',
   'g.check':'Проверка на пропечатку',
   'g.recipe':'Рекомендации печати',
   'recipe.hint':'Те же значения зашиты в проект .3mf. Если слайсер их не подхватил, вбей руками: имена слева совпадают с полями в поиске настроек Orca, Bambu Studio и Creality Print.',
@@ -618,8 +690,8 @@ ru:{
 Рельеф логотипа: ${p.rel} мм, фаска букв ${p.bev} мм, уклон основания ${p.draft} мм
 ${p.plate?`ТЕСТОВАЯ ПЛАШКА 3x3. Колонки слева направо: лого ${(p.logo*0.85).toFixed(1)} / ${p.logo.toFixed(1)} / ${(p.logo*1.15).toFixed(1)} мм.
 Ряды сверху вниз: рельеф 0.30 / 0.42 / 0.55 мм. Печатать одним заданием, смотреть под лупой.`:''}
-Крепление: ${ins.label} — ${p.mount==='pocket'?'гнездо в теле':p.mount==='boss'?('пятак на спинке Ø'+p.bd+'×'+p.bh+' мм'):p.mount==='boss2'?('два пятака Ø'+p.bd+' мм, разнос '+p.bsp+' мм'):'плоская спинка'}
-Гнездо: Ø${p.pd} мм, глубина ${p.pdep} мм${p.lid>0.05?(', закрыто крышкой '+p.lid+' мм')+'\nПАУЗА: печать лицом вниз, поставить паузу на высоте '+(meta.totalH-p.lid).toFixed(2)+' мм, вложить вставку, продолжить.':', открытое — вклеить эпоксидкой'}${ins.mag?`
+${p.loop?('Крепление: кольцо для брелока '+(p.loop==='right'?'справа':'слева')+', отверстие Ø'+p.loopD+' мм, ободок '+p.loopW+' мм'):`Крепление: ${ins.label} — ${p.mount==='pocket'?'гнездо в теле':p.mount==='boss'?('пятак на спинке Ø'+p.bd+'×'+p.bh+' мм'):p.mount==='boss2'?('два пятака Ø'+p.bd+' мм, разнос '+p.bsp+' мм'):'плоская спинка'}
+Гнездо: Ø${p.pd} мм, глубина ${p.pdep} мм${p.lid>0.05?(', закрыто крышкой '+p.lid+' мм')+'\nПАУЗА: печать лицом вниз, поставить паузу на высоте '+(meta.totalH-p.lid).toFixed(2)+' мм, вложить вставку, продолжить.':', открытое — вклеить эпоксидкой'}`}${ins.mag&&!p.loop?`
 МАГНИТЫ: приклеивать только в паре с ответным магнитом — так полярность выставится сама.
 Ответный магнит за тканью, между ними 0.5-1 мм пластика и ткань: держит уверенно.
 Если магнитов два — оба должны смотреть наружу одним полюсом.`:''}
@@ -693,8 +765,32 @@ en:{
   'f.inv':'Engrave letters inward (print face down)',
   'hint.grow':'Thickening is a rough offset along the outline normal. It rescues thin logos; past 0.2&nbsp;mm it starts merging neighbouring letters.',
   'g.mount':'Fastening',
-  'f.insert':'Insert',
-  'ins.needle':'Butterfly clutch pin Ø10×0.5',
+  'f.mtype':'Type',
+  'mtype.needle':'Butterfly clutch pin',
+  'mtype.magnet':'Magnet',
+  'mtype.ring':'Keychain ring',
+  'mtype.none':'None, flat back',
+  'f.msize':'Magnet size',
+  'f.mcount':'Count',
+  'cnt.1':'One',
+  'cnt.2':'Two (for wide badges)',
+  'ph.auto':'auto',
+  'nseat.pocket':'Sink into a pocket',
+  'nseat.inset':'Socket only, no pad',
+  'nseat.flat':'Glue onto the back',
+  'gseat.socket':'Sink into a socket',
+  'gseat.lid':'Hide under a lid (pause the print)',
+  'gseat.flat':'Glue onto the back',
+  'f.lid':'Lid thickness',
+  'g.fine':'Fine tuning',
+  'f.loopoff':'Ring offset X / Y',
+  'f.loopf':'Tab joint fillet',
+  'loop.reset':'reset position',
+  'hint.needle':'The clutch disc is Ø10&nbsp;mm. A 10.3&nbsp;mm pocket leaves room for epoxy and sinks the disc flush. If the body is thinner than the pocket, a pad grows on the back.',
+  'hint.magnet':'Under a lid the magnet is sealed inside: the print pauses, you drop the magnet in and resume. Glue magnets only as a pair with the mating one, so the polarity sets itself.',
+  'hint.none':'The back stays flat: glue, tape, or just a keepsake.',
+  'w.loopClamp':'The offset pushed the hole onto a letter or past the plate edge, so it stays at the nearest allowed spot.',
+  'w.loopEdge':v=>'The rim between the hole and the edge is '+v+' mm, the ring may tear through it.',
   'ins.mag5':'Magnet 5×2 mm',
   'ins.mag6':'Magnet 6×3 mm',
   'ins.mag8':'Magnet 8×3 mm',
@@ -705,22 +801,28 @@ en:{
   'f.zone':'Socket search zone ±',
   'f.off':'Socket offset X / Y',
   'f.seat':'Seating',
-  'seat.socket':'Recess into a socket',
-  'seat.flat':'Glue onto a pad',
   'f.bh':'Pad height',
-  'f.lidon':'Close with a lid (pause the print)',
-  'f.mount':'Mount',
-  'mount.auto':'Auto: pocket or pad',
-  'mount.pocket':'Pocket in the base',
-  'mount.inset':'Socket only, no pad',
-  'mount.boss':'Pad on the back',
-  'mount.boss2':'Two pads on the back',
-  'mount.none':'Flat back',
-  'f.bd':'Pad Ø (min.)',
+  'f.loopside':'Side',
+  'loop.left':'Left',
+  'loop.right':'Right',
+  'f.loopd':'Hole Ø',
+  'f.loopw':'Rim width',
+  'hint.loop':'A hole for a split ring. Move it with the X / Y offset: the generator will not let it onto the letters or past the edge. Inside the plate it goes to free room by the chosen edge, and a rectangle grows longer when there is not enough room. A standard Ø25 mm ring of 1.2–1.5 mm wire needs a 4–5 mm hole. A rim thinner than 2 mm gets worn through by the ring over time.',
+  'mt.loop':(side,d,w)=>'ring on the '+side+', hole Ø'+d+' mm, rim '+w+' mm',
+  'loop.l':'left', 'loop.r':'right',
+  'f.loopin':'Placement',
+  'loopin.in':'Inside the plate',
+  'loopin.out':'Outside, as a tab',
+  'mt.loopIn':' · inside the plate',
+  'w.loopNoRoom':'There is no free room in the plate for the hole and its rim, so the ring moved outside as a tab. Enlarge the plate, shrink the logo or the hole.',
+  'w.loopFlatDisc':'With the hole inside, the round plate is built without the dome.',
+  'w.loopCut':'An outline plate hugs the letters and has no free room for the hole, so the ring moved outside as a tab. To get the hole inside, pick the rounded rectangle: it grows longer for the ring on its own.',
+  'w.loopThin':v=>'The loop rim is '+v+' mm, the ring will wear through it or bend it open. Use 2 mm or more.',
+  'w.loopBlock':'A letter or its counter sits close to the edge, so the loop tail stops short of it and only just enters the plate. If the loop feels weak, widen the border or move the logo.',
+  'f.bd':'Pad Ø, min. (0 — match the socket)',
   'f.bsp':'Centre spacing',
-  'f.pd':'Socket Ø',
-  'f.pdep':'Depth',
-  'hint.pocket':'A standard clutch disc is Ø10&nbsp;mm. A 10.3&nbsp;mm pocket leaves room for epoxy and sinks the disc flush so the pin does not wobble.',
+  'f.pd':'Insert socket Ø',
+  'f.pdep':'Insert depth / height',
   'g.check':'Printability check',
   'g.recipe':'Print settings',
   'recipe.hint':'The same values are embedded in the .3mf project. If your slicer did not pick them up, type them in: the names on the left match the setting search in Orca, Bambu Studio and Creality Print.',
@@ -852,8 +954,8 @@ Overall size: ${meta.size}, total thickness ${meta.totalH.toFixed(2)} mm
 Logo relief: ${p.rel} mm, letter bevel ${p.bev} mm, base draft ${p.draft} mm
 ${p.plate?`3x3 TEST TILE. Columns left to right: logo ${(p.logo*0.85).toFixed(1)} / ${p.logo.toFixed(1)} / ${(p.logo*1.15).toFixed(1)} mm.
 Rows top to bottom: relief 0.30 / 0.42 / 0.55 mm. Print in one job and inspect under a loupe.`:''}
-Fastening: ${ins.label} — ${p.mount==='pocket'?'pocket in the body':p.mount==='boss'?('pad on the back Ø'+p.bd+'×'+p.bh+' mm'):p.mount==='boss2'?('two pads Ø'+p.bd+' mm, '+p.bsp+' mm apart'):'flat back'}
-Socket: Ø${p.pd} mm, depth ${p.pdep} mm${p.lid>0.05?(', closed with a '+p.lid+' mm lid')+'\nPAUSE: print face down, pause at height '+(meta.totalH-p.lid).toFixed(2)+' mm, drop the insert in, resume.':', open — glue it in with epoxy'}${ins.mag?`
+${p.loop?('Fastening: keychain ring on the '+(p.loop==='right'?'right':'left')+', hole Ø'+p.loopD+' mm, rim '+p.loopW+' mm'):`Fastening: ${ins.label} — ${p.mount==='pocket'?'pocket in the body':p.mount==='boss'?('pad on the back Ø'+p.bd+'×'+p.bh+' mm'):p.mount==='boss2'?('two pads Ø'+p.bd+' mm, '+p.bsp+' mm apart'):'flat back'}
+Socket: Ø${p.pd} mm, depth ${p.pdep} mm${p.lid>0.05?(', closed with a '+p.lid+' mm lid')+'\nPAUSE: print face down, pause at height '+(meta.totalH-p.lid).toFixed(2)+' mm, drop the insert in, resume.':', open — glue it in with epoxy'}`}${ins.mag&&!p.loop?`
 MAGNETS: glue them only as a pair with the mating magnet, that way the polarity sets itself.
 With the mating magnet behind the fabric and 0.5-1 mm of plastic plus cloth between them, the hold is solid.
 If there are two magnets, both must face outward with the same pole.`:''}
@@ -912,6 +1014,7 @@ function applyLang(){
   document.querySelectorAll('[data-i18n]').forEach(el=>{ el.textContent=t(el.dataset.i18n); });
   document.querySelectorAll('[data-i18n-html]').forEach(el=>{ el.innerHTML=t(el.dataset.i18nHtml); });
   document.querySelectorAll('[data-i18n-title]').forEach(el=>{ el.title=t(el.dataset.i18nTitle); });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el=>{ el.placeholder=t(el.dataset.i18nPh); });
   document.querySelectorAll('[data-lang]').forEach(b=>b.setAttribute('aria-pressed', b.dataset.lang===LANG ? 'true' : 'false'));
 
   const d=$('drop');
@@ -1331,17 +1434,48 @@ function attachHoles(shapes,holeRings){
    и букв приходят из трассировки в произвольной ориентации, и при неверной
    стенка выворачивается наизнанку. Для слайсера это дыра в теле: именно из-за
    этого пропадал карман под вставку и сыпались non-manifold edges. */
+/* getPoints у замкнутой кривой возвращает последнюю точку поверх первой.
+   Для стенок это вырожденный отрезок, а скос выдавливания на нём ломается:
+   из-за этого у отверстия под кольцо рвалась кромка. */
+function openRing(pts){
+  const a=pts[0], b=pts[pts.length-1];
+  if(pts.length>3 && Math.hypot(a.x-b.x,a.y-b.y)<1e-6) pts=pts.slice(0,-1);
+  return dropFlat(pts);
+}
+/* Триангуляция (earcut) молча выкидывает совпавшие точки и точки строго
+   на одной прямой, а стенки выдавливания их оставляют. Крышка и стенки
+   расходятся, и каждое такое ребро становится дырой в сетке. Растровый
+   контур даёт такие точки на прямых участках, поэтому чистим заранее. */
+function dropFlat(pts){
+  let a=pts, changed=true, guard=0;
+  while(changed && a.length>3 && guard++<8){
+    changed=false;
+    const n=a.length, keep=[];
+    for(let i=0;i<n;i++){
+      const p=a[(i-1+n)%n], q=a[i], r=a[(i+1)%n];
+      const ux=q.x-p.x, uy=q.y-p.y, vx=r.x-q.x, vy=r.y-q.y;
+      const lu=Math.hypot(ux,uy), lv=Math.hypot(vx,vy);
+      if(lu<1e-6 || (lv>1e-9 && Math.abs(ux*vy-uy*vx)<=1e-9*lu*lv)){ changed=true; continue; }
+      keep.push(q);
+    }
+    if(keep.length<3) return a;
+    a=keep;
+  }
+  return a;
+}
 function normShapes(list){
   const SEG=36;
   return list.map(sh=>{
     let outer;
     try{ outer=sh.getPoints(SEG); }catch(e){ return sh; }
     if(!outer || outer.length<3) return sh;
+    outer=openRing(outer);
     if(signedArea(outer)<0) outer=outer.slice().reverse();
     const ns=new THREE.Shape(outer);
     (sh.holes||[]).forEach(h=>{
       let pts; try{ pts=h.getPoints(SEG); }catch(e){ pts=null; }
       if(!pts || pts.length<3) return;
+      pts=openRing(pts);
       if(signedArea(pts)>0) pts=pts.slice().reverse();
       ns.holes.push(new THREE.Path(pts));
     });
@@ -1397,7 +1531,30 @@ function outlinePlate(shapes,h,pocketD,pocketDepth){
 let logoRings=null, logoName='ewento', analysis=null, buildWarn=[];
 const state={};
 
+/* Интерфейс спрашивает по-человечески: тип крепления и его посадку.
+   Геометрия по-прежнему работает со старыми полями mount / seat / insert,
+   сюда они переводятся из того, что выбрано. */
+function mountParams(){
+  const type=$('mtype').value, two=$('mcount').value==='2';
+  const mag=type==='magnet';
+  const seat = mag ? $('gseat').value : $('nseat').value;
+  const flat = seat==='flat';
+  let mount;
+  if(type==='none'||type==='ring') mount='none';
+  else if(two) mount='boss2';
+  else if(mag && seat==='socket') mount='inset';
+  else if(!mag && seat==='inset') mount='inset';
+  // заданный минимальный Ø площадки учитывает только режим boss
+  else mount = (+$('bd').value>0) ? 'boss' : 'pocket';
+  return {
+    mount, seat: flat?'flat':'socket',
+    insert: mag ? $('msize').value : 'needle',
+    lid: (mag && seat==='lid') ? +$('lid').value||0.4 : 0,
+    loop: type==='ring' ? $('loopside').value : ''
+  };
+}
 function readParams(){
+  const m=mountParams();
   return {
     tech:$('tech').value,
     mode:$('mode').value, marg:+$('marg').value, rad:+$('rad').value, ring:+$('ring').value, solid:$('solid').checked,
@@ -1406,13 +1563,16 @@ function readParams(){
     draft:+$('draft').value, plate:$('plate').checked,
     inv:$('inv').checked,
     zone:+$('zone').value,
-    autoth:$('autoth').checked, seat:$('seat').value, padh:+$('bh').value||0.8,
+    autoth:$('autoth').checked, seat:m.seat, padh:+$('bh').value||0.8,
     wall:+$('wall').value, fwall:+$('fwall').value,
     ox:+$('ox').value||0, oy:+$('oy').value||0,
     lx:+$('lx').value||0, ly:+$('ly').value||0,
-    insert:$('insert').value, lid:(INS[$('insert').value]&&INS[$('insert').value].mag)?+$('lid').value:0,
-    mount:$('mount').value, bd:+$('bd').value, bh:+$('bh').value, bsp:+$('bsp').value,
-    pock:$('mount').value==='pocket'||$('mount').value==='auto', pd:+$('pd').value, pdep:+$('pdep').value
+    insert:m.insert, lid:m.lid, mount:m.mount,
+    loop:m.loop, loopIn:$('loopin').value==='in',
+    loopD:clamp(+$('loopd').value||4.5,1,20), loopW:clamp(+$('loopw').value||2.5,0.4,10),
+    lox:+$('lox').value||0, loy:+$('loy').value||0, loopF:clamp(+$('loopf').value||0,0,10),
+    bd:Math.max(0,+$('bd').value||0), bh:+$('bh').value, bsp:Math.max(0,+$('bsp').value||0),
+    pd:+$('pd').value, pdep:+$('pdep').value
   };
 }
 
@@ -1427,7 +1587,7 @@ function build(){
   const cells=[];
   for(let r=0;r<3;r++) for(let c=0;c<3;c++){
     const q=Object.assign({},p,{
-      mode:'disc', pock:false, mount:'none', lid:0, h:1.0, dome:0, ch:0.25,
+      mode:'disc', pock:false, mount:'none', loop:'', lid:0, h:1.0, dome:0, ch:0.25,
       logo:+(p.logo*sizes[c]).toFixed(2), rel:rels[r],
       D:Math.max(p.logo*sizes[c]+5, 10)
     });
@@ -1654,6 +1814,12 @@ function plateOutline(rings, off, solid){
   }
   const px=ctx.getImageData(0,0,W,H).data;
   const av=(i,j)=> (i<0||j<0||i>=W||j>=H) ? 0 : px[(j*W+i)*4+3];
+  const toMM=p=>({x:p.x/ppm+(bb.minx-pad), y:(bb.maxy+pad)-p.y/ppm});
+  return traceAlpha(av,W,H,ppm,toMM);
+}
+/* Контур по альфа-каналу: marching squares с интерполяцией, сшивка
+   отрезков в кольца, лёгкое сглаживание. av(i,j) — альфа 0..255. */
+function traceAlpha(av,W,H,ppm,toMM){
   const on=(i,j)=> av(i,j)>128;
   // точка пересечения ищется интерполяцией по альфе — контур выходит гладким
   const ip=(a,b)=>{ const d=b-a; return Math.abs(d)<1e-6?0.5:Math.min(1,Math.max(0,(128-a)/d)); };
@@ -1698,7 +1864,6 @@ function plateOutline(rings, off, solid){
       if(Math.hypot(a.x-b.x,a.y-b.y)<=2.0) out.push(poly);
     }
   }
-  const toMM=p=>({x:p.x/ppm+(bb.minx-pad), y:(bb.maxy+pad)-p.y/ppm});
   const smooth=(r,passes)=>{
     let a=r;
     for(let s=0;s<passes;s++){
@@ -1723,6 +1888,102 @@ function plateOutline(rings, off, solid){
     return res;
   }).filter(r=>r.length>=8);
 }
+function nestRings(raw){
+  const items=raw.map(pts=>({pts,area:Math.abs(signedArea(pts))}))
+                 .filter(r=>r.area>0.02).sort((a,b)=>b.area-a.area);
+  items.forEach(it=>{it.parent=-1;});
+  for(let i=0;i<items.length;i++)
+    for(let j=0;j<i;j++)
+      if(pointInPoly(items[i].pts[0],items[j].pts)) items[i].parent=j;
+  const dep=i=>{let d=0,k=i,g=0;while(items[k].parent>=0&&g++<64){d++;k=items[k].parent;}return d;};
+  const outers=[],inners=[];
+  items.forEach((it,i)=>{ (dep(i)%2===0?outers:inners).push(it.pts); });
+  return {outers,inners};
+}
+/* Точное евклидово преобразование расстояний (Felzenszwalb–Huttenlocher):
+   на входе 0 там, где «своё», и BIG в остальных пикселях; на выходе квадрат
+   расстояния до ближайшего своего пикселя. Два прохода по 1D, O(W·H). */
+const EDT_BIG=1e20;
+function edt1(f,n,d,v,z){
+  let k=0; v[0]=0; z[0]=-EDT_BIG; z[1]=EDT_BIG;
+  for(let q=1;q<n;q++){
+    let s=((f[q]+q*q)-(f[v[k]]+v[k]*v[k]))/(2*q-2*v[k]);
+    while(s<=z[k]){ k--; s=((f[q]+q*q)-(f[v[k]]+v[k]*v[k]))/(2*q-2*v[k]); }
+    k++; v[k]=q; z[k]=s; z[k+1]=EDT_BIG;
+  }
+  k=0;
+  for(let q=0;q<n;q++){ while(z[k+1]<q) k++; const r=q-v[k]; d[q]=r*r+f[v[k]]; }
+}
+function edt2(g,W,H){
+  const n=Math.max(W,H), f=new Float64Array(n), d=new Float64Array(n),
+        v=new Int32Array(n), z=new Float64Array(n+1), out=new Float64Array(W*H);
+  for(let i=0;i<W;i++){
+    for(let j=0;j<H;j++) f[j]=g[j*W+i];
+    edt1(f,H,d,v,z);
+    for(let j=0;j<H;j++) out[j*W+i]=d[j];
+  }
+  for(let j=0;j<H;j++){
+    for(let i=0;i<W;i++) f[i]=out[j*W+i];
+    edt1(f,W,d,v,z);
+    for(let i=0;i<W;i++) out[j*W+i]=d[i];
+  }
+  return out;
+}
+/* Плашка + ушко одним контуром со скруглённым стыком. Объединение
+   растрируется, затем в зоне стыка делается морфологическое закрытие:
+   раздуть на r и ужать обратно на r. Впадины уже 2r заполняются дугой
+   радиуса r, выпуклые края не меняются. Зона — только вокруг ушка, иначе
+   закрытие залило бы и промежутки между буквами по всему контуру. */
+let FILLET_CACHE={key:null,val:null};
+function filletUnionCached(key,outers,inners,add,r){
+  if(FILLET_CACHE.key!==key) FILLET_CACHE={key,val:filletUnion(outers,inners,add,r)};
+  return FILLET_CACHE.val;
+}
+function filletUnion(outers,inners,add,r){
+  const bb=bboxOf(outers.concat([add]));
+  const pad=r+1.5;
+  const wmm=(bb.maxx-bb.minx)+2*pad, hmm=(bb.maxy-bb.miny)+2*pad;
+  const ppm=Math.max(8,Math.min(24,1000/Math.max(wmm,hmm)));
+  const W=Math.ceil(wmm*ppm), H=Math.ceil(hmm*ppm), N=W*H;
+  if(N>4200000) return null;
+  const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+  const ctx=cv.getContext('2d',{willReadFrequently:true});
+  const X=x=>(x-(bb.minx-pad))*ppm, Y=y=>((bb.maxy+pad)-y)*ppm;
+  const alpha=rs=>{
+    ctx.clearRect(0,0,W,H); ctx.fillStyle='#000'; ctx.beginPath();
+    rs.forEach(q=>{ ctx.moveTo(X(q[0].x),Y(q[0].y));
+      for(let i=1;i<q.length;i++) ctx.lineTo(X(q[i].x),Y(q[i].y)); ctx.closePath(); });
+    ctx.fill('nonzero');
+    const d=ctx.getImageData(0,0,W,H).data, a=new Uint8ClampedArray(N);
+    for(let i=0;i<N;i++) a[i]=d[i*4+3];
+    return a;
+  };
+  const aAdd=alpha([add]);
+  const aIn=inners.length?alpha(inners):null;
+  let a0=alpha(outers);
+  for(let i=0;i<N;i++) if(aAdd[i]>a0[i]) a0[i]=aAdd[i];
+  const rp=r*ppm, zone=(2*r+0.5)*ppm;
+  const g=new Float64Array(N);
+  for(let i=0;i<N;i++) g[i]=a0[i]>=128?0:EDT_BIG;
+  const d1=edt2(g,W,H);                              // до ближайшего тела
+  for(let i=0;i<N;i++) g[i]=d1[i]<=rp*rp?EDT_BIG:0;
+  const d2=edt2(g,W,H);                              // до края раздутого
+  for(let i=0;i<N;i++) g[i]=aAdd[i]>=128?0:EDT_BIG;
+  const d3=edt2(g,W,H);                              // до ушка
+  const out=new Uint8ClampedArray(N);
+  for(let i=0;i<N;i++){
+    let v=a0[i];
+    if(d3[i]<=zone*zone){
+      const c=Math.min(1,Math.max(0,Math.sqrt(d2[i])-rp+0.5))*255;
+      if(c>v) v=c;
+    }
+    if(aIn && aIn[i]) v=Math.min(v,255-aIn[i]);   // контрформы остаются дырами
+    out[i]=v;
+  }
+  const av=(i,j)=> (i<0||j<0||i>=W||j>=H) ? 0 : out[j*W+i];
+  const toMM=p=>({x:p.x/ppm+(bb.minx-pad), y:(bb.maxy+pad)-p.y/ppm});
+  return nestRings(traceAlpha(av,W,H,ppm,toMM));
+}
 function plateParts(rings,off,solid,cacheKey){
   if(PLATE_CACHE.key===cacheKey) return PLATE_CACHE.val;
   let raw=null;
@@ -1737,16 +1998,7 @@ function plateParts(rings,off,solid,cacheKey){
   }
   if(!sane) val=ringsToParts(rings,off);                        // запасной путь
   else{
-    const items=raw.map(pts=>({pts,area:Math.abs(signedArea(pts))}))
-                   .filter(r=>r.area>0.02).sort((a,b)=>b.area-a.area);
-    items.forEach(it=>{it.parent=-1;});
-    for(let i=0;i<items.length;i++)
-      for(let j=0;j<i;j++)
-        if(pointInPoly(items[i].pts[0],items[j].pts)) items[i].parent=j;
-    const dep=i=>{let d=0,k=i,g=0;while(items[k].parent>=0&&g++<64){d++;k=items[k].parent;}return d;};
-    const outers=[],inners=[];
-    items.forEach((it,i)=>{ (dep(i)%2===0?outers:inners).push(it.pts); });
-    val={outers,inners};
+    val=nestRings(raw);
   }
   // «Сплошное основание» = вообще без отверстий: кант смыкает устье просвета
   // у «n», «e», «t» и превращает его в замкнутую дырку — её тоже убираем
@@ -1775,6 +2027,136 @@ function ringGeo(R,r,h){
 function discGeo(R,h){
   const sh=new THREE.Shape(); sh.absellipse(0,0,R,R,0,Math.PI*2,false);
   return new THREE.ExtrudeGeometry(sh,{depth:h,bevelEnabled:false,steps:1,curveSegments:40});
+}
+
+/* Ушко под кольцо для ключей. Отдельное тело: скруглённый язычок с
+   отверстием, который торцом заходит в плашку. Отверстие ставится целиком
+   за краем плашки, иначе плашка его зальёт. Хвост язычка уходит вглубь до
+   самого мелкого места края в полосе ушка, чтобы между ним и плашкой не
+   осталось щели, но не дальше контрформ, чтобы их не залить. */
+function loopGeom(outers,inners,side,hd,rim,y0,push){
+  const s = side==='right' ? 1 : -1;
+  const R = hd/2 + rim, rows = 13;
+  y0=y0||0;
+  // крайняя точка плашки по строке y: максимум s*x по пересечениям с краем
+  const edgeAt=(rings,y)=>{
+    let e=-1e9;
+    rings.forEach(r=>{
+      for(let i=0;i<r.length;i++){
+        const a=r[i], b=r[(i+1)%r.length];
+        if((a.y>y)===(b.y>y)) continue;
+        const x=a.x+(y-a.y)/(b.y-a.y)*(b.x-a.x);
+        if(s*x>e) e=s*x;
+      }
+    });
+    return e;
+  };
+  // строки: равномерная сетка плюс высоты вершин контура, иначе сетка
+  // может проскочить и пик края, и дно провала между буквами
+  const ys=[];
+  for(let j=0;j<=rows;j++) ys.push(y0-R+2*R*j/rows);
+  outers.forEach(r=>r.forEach(q=>{ if(Math.abs(q.y-y0)<R) ys.push(q.y+1e-7); }));
+  let E=-1e9, shallow=1e9;
+  for(const y of ys){
+    const e=edgeAt(outers,y);
+    if(e<=-1e8) continue;                 // строка мимо плашки
+    if(e>E) E=e;
+    if(e<shallow) shallow=e;
+  }
+  if(E<=-1e8) return null;
+  let back = Math.max(shallow-0.6, E-Math.max(2*R,6));
+  let blocked=false;
+  inners.forEach(r=>r.forEach(q=>{
+    if(Math.abs(q.y-y0)<R && s*q.x+0.4>back){ back=s*q.x+0.4; blocked=true; }
+  }));
+  back=Math.min(back,E-0.5);              // перекрытие с плашкой обязательно
+  const cx = s*(E+0.3+hd/2+Math.max(0,push||0));
+  return {s,R,y0,cx,xb:s*back,E:s*E,hole:hd/2,blocked};
+}
+function loopRing(L,n){
+  n=n||48; const pts=[];
+  // полуокружность вокруг отверстия + прямой хвост назад в плашку
+  for(let i=0;i<=n;i++){
+    const a=-Math.PI/2+Math.PI*i/n;
+    pts.push({x:L.cx+L.s*Math.cos(a)*L.R, y:L.y0+Math.sin(a)*L.R});
+  }
+  pts.push({x:L.xb,y:L.y0+L.R});
+  pts.push({x:L.xb,y:L.y0-L.R});
+  return pts;
+}
+
+/* Отверстие внутри плашки. Ищем точку ближе всего к выбранному краю, где
+   вокруг отверстия остаётся ободок до края плашки и зазор до букв. Сетка
+   плюс уточнение: сетка даёт кандидата, уточнение дожимает его к краю. */
+/* Зонд для отверстия: внутри ли плашки, сколько до края и до букв. */
+function loopProbe(outers,inners,letters){
+  const edge=boundaryPts(outers.concat(inners),900);
+  const lpts=letters.length?boundaryPts(letters,900):[];
+  const md=(pts,x,y)=>{ let d=1e18;
+    for(let i=0;i<pts.length;i++){ const a=pts[i].x-x,b=pts[i].y-y,t=a*a+b*b; if(t<d) d=t; }
+    return Math.sqrt(d); };
+  return (x,y)=>{
+    const inside = insideAny({x,y},outers) && !(inners.length && insideAny({x,y},inners))
+      && !(letters.length && insideAny({x,y},letters));
+    return {inside, edge:inside?md(edge,x,y):0, let:lpts.length?md(lpts,x,y):1e9};
+  };
+}
+function loopInside(outers,inners,letters,side,hd,rim,gap){
+  const s = side==='right' ? 1 : -1;
+  const R = hd/2+rim, needL = hd/2+gap;
+  if(!outers.length) return null;
+  const bb=bboxOf(outers);
+  const probe=loopProbe(outers,inners,letters);
+  const fits=(x,y)=>{ const q=probe(x,y); return q.inside && q.edge>=R && q.let>=needL; };
+  const w=bb.maxx-bb.minx, h=bb.maxy-bb.miny;
+  const st=Math.max(0.2,Math.max(w,h)/160);
+  const score=(x,y)=>s*x-0.15*Math.abs(y);
+  let best=null;
+  for(let x=bb.minx+R;x<=bb.maxx-R+1e-9;x+=st)
+    for(let y=bb.miny+R;y<=bb.maxy-R+1e-9;y+=st)
+      if((!best||score(x,y)>best.sc) && fits(x,y)) best={x,y,sc:score(x,y)};
+  if(!best) return null;
+  // дожимаем к краю мелкими шагами
+  for(let step=st/2;step>0.02;step/=2){
+    let moved=true,guard=0;
+    while(moved&&guard++<60){ moved=false;
+      for(const [a,b] of [[s,0],[0,1],[0,-1],[s,1],[s,-1]]){
+        const x=best.x+a*step, y=best.y+b*step;
+        if(score(x,y)>best.sc && fits(x,y)){ best={x,y,sc:score(x,y)}; moved=true; }
+      } }
+  }
+  return {cx:best.x,cy:best.y,hole:hd/2,R,probe};
+}
+/* Ручной сдвиг отверстия. Жёсткие границы — не рвать край (ободок от 0.8 мм)
+   и не заходить на буквы; если сдвиг их нарушает, идём от авто-точки к
+   желаемой и останавливаемся на последней допустимой. */
+function shiftLoop(L,dx,dy,gap){
+  if(!dx && !dy) return {L,clamped:false};
+  const ok=(x,y)=>{ const q=L.probe(x,y); return q.inside && q.edge>=L.hole+0.8 && q.let>=L.hole+Math.min(gap,0.5); };
+  if(ok(L.cx+dx,L.cy+dy)) return {L:Object.assign({},L,{cx:L.cx+dx,cy:L.cy+dy}),clamped:false};
+  let lo=0, hi=1;
+  for(let i=0;i<22;i++){ const m=(lo+hi)/2; if(ok(L.cx+dx*m,L.cy+dy*m)) lo=m; else hi=m; }
+  return {L:Object.assign({},L,{cx:L.cx+dx*lo,cy:L.cy+dy*lo}),clamped:true};
+}
+/* Прямоугольник под внутреннее кольцо: удлиняем плашку с нужной стороны,
+   чтобы за буквами поместились зазор, отверстие и ободок. Высоту поднимаем
+   до диаметра ободка, если плашка ниже. */
+function rectForLoop(rw,rh,rad,letters,side,hd,rim,gap){
+  const s = side==='right' ? 1 : -1;
+  const R=hd/2+rim;
+  let ext=-1e9;
+  letters.forEach(r=>r.forEach(q=>{ if(s*q.x>ext) ext=s*q.x; }));
+  const far=Math.max(rw/2, ext+gap+hd/2+R+0.3);
+  const H=Math.max(rh,2*R+0.4);
+  const W=rw/2+far, off=s*(far-rw/2)/2;
+  return roundRectPoly(W,H,rad).map(q=>({x:q.x+off,y:q.y}));
+}
+function addHoleTo(shapes,c,r){
+  let tgt=null;
+  for(const sh of shapes){ let q; try{q=sh.getPoints();}catch(e){q=null;}
+    if(q&&pointInPoly({x:c.x,y:c.y},q)){ tgt=sh; break; } }
+  if(tgt){ const h=new THREE.Path(); h.absellipse(c.x,c.y,r,r,0,Math.PI*2,true); tgt.holes.push(h); }
+  return shapes;
 }
 
 function warn(t){ if(buildWarn.indexOf(t)<0) buildWarn.push(t); }
@@ -1843,7 +2225,7 @@ function buildPin(p){
   const LAY=(TECH[p.tech]||TECH.fdm02).layer;
   const minTop=Math.max(p.fwall,LAY);                 // не тоньше одного слоя
   const wantIn = p.mount!=='none' && p.seat!=='flat';
-  const thick = (p.autoth && wantIn) ? Math.max(p.h, p.pdep+minTop) : p.h;
+  const thick = (p.autoth && wantIn) ? Math.max(p.h, p.pdep+minTop+(p.lid>0.05?p.lid:0)) : p.h;
   if(thick>p.h+0.01) warn(t('w.thickUp',p.h.toFixed(1),thick.toFixed(1),minTop.toFixed(2)));
   const bodyH=engrave?Math.max(0.4,thick-relief):thick;
   const EX=(sh,d)=>new THREE.ExtrudeGeometry(
@@ -1863,12 +2245,63 @@ function buildPin(p){
   const plateKey = p.mode==='disc' ? null
     : [p.logo,p.ring,p.grow,solidPlate,logoName].join('|');
   const rw=w*k+2*p.marg, rh=hh*k+2*p.marg;
-  const parts = p.mode==='disc'
+  // зазор от отверстия до букв: с учётом утолщения и юбки у основания
+  const loopGap = 1+Math.max(0,p.grow/2)+(engrave?0:p.draft);
+  const loopWant = !!(p.loop && p.loopIn);
+  let parts = p.mode==='disc'
     ? {outers:[circlePoly(p.D/2)], inners:[]}
     : p.mode==='rect'
-    ? {outers:[roundRectPoly(rw,rh,p.rad)], inners:[]}
+    ? {outers:[loopWant ? rectForLoop(rw,rh,p.rad,scaledLogo,p.loop,p.loopD,p.loopW,loopGap)
+                      : roundRectPoly(rw,rh,p.rad)], inners:[]}
     : plateParts(scaled,off,solidPlate,plateKey);
-  const innerHoles = (p.mode==='disc'||solidPlate) ? [] : parts.inners;
+  let innerHoles = (p.mode==='disc'||solidPlate) ? [] : parts.inners;
+  let loopIn = loopWant ? loopInside(parts.outers,innerHoles,scaledLogo,p.loop,p.loopD,p.loopW,loopGap) : null;
+  if(loopIn && (p.lox||p.loy)){
+    const sh=shiftLoop(loopIn,p.lox,p.loy,loopGap);
+    loopIn=sh.L;
+    if(sh.clamped) warn(t('w.loopClamp'));
+    const rimNow=loopIn.probe(loopIn.cx,loopIn.cy).edge-loopIn.hole;
+    if(rimNow<p.loopW-0.05 && rimNow<2) warn(t('w.loopEdge',rimNow.toFixed(1)));
+  }
+  if(loopWant && !loopIn && p.mode!=='cut') warn(t('w.loopNoRoom'));
+  if(loopIn && p.mode==='disc' && !engrave && p.dome>0.01) warn(t('w.loopFlatDisc'));
+  if(loopWant && !loopIn && p.mode==='cut') warn(t('w.loopCut'));
+  // Ушко снаружи. Со скруглением оно вливается в контур плашки и дальше
+  // строится вместе с ней одним телом; без скругления — отдельное тело.
+  // Врезку печатают лицом вниз, там ушко должно доставать до лица, поэтому
+  // хвост не пускаем на буквы, чтобы не залить их.
+  let lugL=null, merged=false;
+  if(p.loop && !loopIn){
+    const block = engrave ? innerHoles.concat(ringsToParts(scaledLogo,p.grow/2).outers) : innerHoles;
+    // по Y ушко не должно уйти с плашки: иначе ему не к чему крепиться
+    const pb=bboxOf(parts.outers);
+    const ly0=clamp(p.loy,pb.miny+0.8,pb.maxy-0.8);
+    if(Math.abs(ly0-p.loy)>0.01) warn(t('w.loopClamp'));
+    lugL=loopGeom(parts.outers,block,p.loop,p.loopD,p.loopW,ly0,(p.loop==='right'?1:-1)*p.lox);
+    if(lugL){
+      if(p.loopW<2) warn(t('w.loopThin',p.loopW.toFixed(1)));
+      if(lugL.blocked) warn(t('w.loopBlock'));
+    }
+    if(lugL && p.loopF>0.05){
+      let u=null;
+      // пересчёт растра дорогой: ключ — всё, от чего зависит контур
+      const fk=[p.mode,p.logo,p.ring,p.grow,solidPlate,logoName,p.marg,p.rad,p.D,p.lx,p.ly,
+        lugL.cx,lugL.y0,lugL.xb,lugL.R,p.loopF].join('|');
+      try{ u=filletUnionCached(fk,parts.outers,innerHoles,loopRing(lugL),p.loopF); }catch(e){ u=null; }
+      // сливаем, только если отверстие целиком внутри одного нового контура
+      const c={x:lugL.cx,y:lugL.y0};
+      const host = u && u.outers.find(o=>pointInPoly(c,o));
+      if(host && boundaryPts([host],600).every(q=>Math.hypot(q.x-c.x,q.y-c.y)>lugL.hole+0.4)){
+        parts={outers:u.outers,inners:(p.mode==='disc'||solidPlate)?[]:u.inners};
+        innerHoles=parts.inners;
+        merged=true;
+      }
+    }
+  }
+  const holeC = loopIn ? {x:loopIn.cx,y:loopIn.cy,r:loopIn.hole}
+    : merged ? {x:lugL.cx,y:lugL.y0,r:lugL.hole} : null;
+  const holeIn = sh => holeC ? addHoleTo(sh,{x:holeC.x,y:holeC.y},holeC.r) : sh;
+  const dome = (p.mode==='disc' && !holeC) ? p.dome : 0;
   const region = makeRegion(parts.outers, innerHoles);
   const bpts = boundaryPts(parts.outers.concat(innerHoles),900);
   const bb2 = bboxOf(parts.outers);
@@ -1878,7 +2311,7 @@ function buildPin(p){
   let spots;
   if(kind==='none') spots=[];
   else if(kind==='boss2'){
-    const q=(bb2.maxx-bb2.minx)/4;
+    const q = p.bsp>0 ? p.bsp/2 : (bb2.maxx-bb2.minx)/4;
     spots=[bestSpot(region,bpts,bb2,needFull,needMin,cX-q,cY,bb2.minx,cX),
            bestSpot(region,bpts,bb2,needFull,needMin,cX+q,cY,cX,bb2.maxx)];
   } else {
@@ -1905,7 +2338,19 @@ function buildPin(p){
   const padLid = (noPad||flat||!lidded||internalVoid||kind==='none') ? 0 : p.lid;
   const off0 = spots.length ? Math.hypot(spots[0].x,spots[0].y) : 0;
 
-  if(p.mode==='disc'){
+  if(p.mode==='disc' && holeC){
+    // точёная плашка не умеет отверстие сбоку, строим выдавливанием;
+    // фаску даёт скос выдавливания, он же снимает кромку у отверстия
+    const bv = engrave ? 0 : Math.min(p.ch, bodyH*0.3);
+    const dsh = ()=>holeIn(merged ? partsToShapes(parts) : [discShape(p.D/2)]);
+    const dg = bv>0.01
+      ? new THREE.ExtrudeGeometry(normShapes(dsh()),{depth:bodyH-2*bv,
+          bevelEnabled:true,bevelThickness:bv,bevelSize:bv,bevelOffset:-bv,bevelSegments:1,
+          steps:1,curveSegments:96})
+      : EX(dsh(),bodyH);
+    if(bv>0.01) dg.translate(0,0,bv);
+    group.add(new THREE.Mesh(dg,mat));
+  } else if(p.mode==='disc'){
     group.add(new THREE.Mesh(
       baseLathe(p.D,bodyH,engrave?0:p.ch,engrave?0:p.dome,p.pd,internalVoid?0:cav), mat));
     if(internalVoid){
@@ -1914,7 +2359,7 @@ function buildPin(p){
     }
   } else {
     if(p.mode==='cut' && engrave && p.ring<1.2) warn(t('w.engrave',p.ring.toFixed(1)));
-    const plate=()=>partsToShapes(parts);
+    const plate=()=>holeIn(partsToShapes(parts));
     if(internalVoid){
       group.add(new THREE.Mesh(EX(plate(),bodyH),mat));
       group.add(new THREE.Mesh(voidCyl(p.pd/2,p.pdep,spots[0].x,spots[0].y,p.lid+p.pdep/2),mat));
@@ -1976,6 +2421,16 @@ function buildPin(p){
   if(off0>1.5 && kind!=='none' && kind!=='boss2')
     warn(t('w.offCenter',off0.toFixed(1)));
 
+  let loopBB=null;
+  if(lugL && !merged){
+    const sh=new THREE.Shape(V2(loopRing(lugL)));
+    const hl=new THREE.Path(); hl.absellipse(lugL.cx,lugL.y0,lugL.hole,lugL.hole,0,Math.PI*2,true);
+    sh.holes.push(hl);
+    group.add(new THREE.Mesh(EX(sh,engrave?bodyH+relief-0.002:bodyH-0.002),mat));
+    loopBB={minx:Math.min(lugL.xb,lugL.cx-lugL.R),maxx:Math.max(lugL.xb,lugL.cx+lugL.R),
+            miny:lugL.y0-lugL.R,maxy:lugL.y0+lugL.R};
+  }
+
   let count=0;
   if(engrave){
     /* Верхняя плита — это поверхность плашки, в которой буквы вырезаны
@@ -1984,7 +2439,7 @@ function buildPin(p){
        отсюда рваная сетка. Форма плашки берётся из parts, буквы из lp. */
     const lp=ringsToParts(scaledLogo,p.grow/2);
     count=lp.outers.length+lp.inners.length;
-    const face = p.mode==='disc' ? [discShape(p.D/2)] : partsToShapes(parts);
+    const face = holeIn((p.mode==='disc' && !merged) ? [discShape(p.D/2)] : partsToShapes(parts));
     attachHoles(face,lp.outers);
     const all=face.concat(lp.inners.map(r=>new THREE.Shape(V2(r))));
     const g=EX(all,relief);
@@ -2000,12 +2455,21 @@ function buildPin(p){
       depth:relief-(bev>0?bev:0), bevelEnabled:bev>0,
       bevelThickness:bev, bevelSize:bev, bevelOffset:0, bevelSegments:2,
       steps:1, curveSegments:1});
-    lg.translate(0,0,bodyH-0.001+(p.dome>0&&p.mode==='disc'?p.dome*0.35:0));
+    lg.translate(0,0,bodyH-0.001+(dome>0?dome*0.35:0));
     group.add(new THREE.Mesh(lg,logoMat));
-    if(p.draft>0.005){
-      const sk=ringsToShapes(scaledLogo,p.grow/2+p.draft).shapes;
-      const sg=new THREE.ExtrudeGeometry(sk,{depth:Math.min(relief*0.45,0.25),bevelEnabled:false,steps:1,curveSegments:1});
-      sg.translate(0,0,bodyH-0.001);
+    /* Уклон — скос от плашки к стенке буквы. Раньше здесь стоял вертикальный
+       бортик шириной с уклон, и у основания выходила ступенька. Теперь это
+       фаска выдавливания: у тонкой пластины она двусторонняя, самая широкая
+       часть посередине. Середину сажаем на плашку, нижняя половина уходит в
+       тело и не видна, верхняя сходится от контура+уклон к контуру буквы.
+       Контур чуть ужат, чтобы верх скоса лёг внутрь буквы, а не на её стенку. */
+    const hs=Math.min(relief*0.6, relief-bev-0.03, bodyH-0.05);
+    if(p.draft>0.005 && hs>0.05){
+      const sk=normShapes(ringsToShapes(scaledLogo,p.grow/2-0.01).shapes);
+      const sg=new THREE.ExtrudeGeometry(sk,{depth:0.02,bevelEnabled:true,
+        bevelThickness:hs,bevelSize:p.draft,bevelOffset:0,bevelSegments:1,
+        steps:1,curveSegments:1});
+      sg.translate(0,0,bodyH-0.001-0.02+(dome>0?dome*0.35:0));
       group.add(new THREE.Mesh(sg,logoMat));
     }
   }
@@ -2018,19 +2482,29 @@ function buildPin(p){
       : makeGhost(ghostD,p.pdep,gp[0],gp[1],gp[2])
   ));
 
+  let fullBB=null;
+  if(p.loop){
+    const a=bboxOf(parts.outers);
+    if(!loopBB) loopBB=a;
+    fullBB={w:Math.max(a.maxx,loopBB.maxx)-Math.min(a.minx,loopBB.minx),
+            h:Math.max(a.maxy,loopBB.maxy)-Math.min(a.miny,loopBB.miny)};
+  }
   group.userData.meta={
-    size: p.mode==='disc' ? t('size.disc',p.D.toFixed(1))
+    size: fullBB ? t('size.rect',fullBB.w.toFixed(1),fullBB.h.toFixed(1))
+      : p.mode==='disc' ? t('size.disc',p.D.toFixed(1))
       : p.mode==='rect' ? t('size.rect',rw.toFixed(1),rh.toFixed(1))
       : t('size.rect',(w*k).toFixed(1),(hh*k).toFixed(1)),
-    totalH: (engrave ? thick : (thick+relief+(p.mode==='disc'?p.dome:0))) + padH + padLid,
+    totalH: (engrave ? thick : (thick+relief+dome)) + padH + padLid,
     kind: kind, thick: thick,
     plateSrc: (p.mode==='cut'?(parts.src||'?'):''),
     spotTxt: spots.length ? t('mt.spot',spots.map(sp=>sp.x.toFixed(1)+'/'+sp.y.toFixed(1)).join(t('mt.and')),(spots[0].r*2).toFixed(1)) : '',
-    mountText: kind==='none' ? t('mt.flatBack')
+    mountText: p.loop ? t('mt.loop',t(p.loop==='right'?'loop.r':'loop.l'),p.loopD,p.loopW)+(loopIn?t('mt.loopIn'):'')
+      : kind==='none' ? t('mt.flatBack')
       : noPad ? (p.pdep-cav>0.05?t('mt.socketProud',cav.toFixed(1),(p.pdep-cav).toFixed(1)):t('mt.sunk'))
       : flat ? (padH>0.05?t('mt.padGlue',padH.toFixed(1)):t('mt.glueBack'))
         : (padH+padLid>0.05 ? t('mt.sunkOut',cav.toFixed(1),(padH+padLid).toFixed(1))
         : (internalVoid?t('mt.underLid'):t('mt.inBody'))),
+    loopAt: holeC ? {x:holeC.x,y:holeC.y} : null, outline: parts.outers,
     rings: count, params: p
   };
   return group;
@@ -2180,7 +2654,8 @@ function refresh(){
   $('s-tris').textContent=t('sb.tris',nfmt(tris));
   $('s-rings').textContent=t('sb.rings',m.rings);
   const mp=m.params;
-  $('s-mount').textContent = mp.mount==='none' ? t('mt.flatBack')
+  $('s-mount').textContent = mp.loop ? m.mountText
+    : mp.mount==='none' ? t('mt.flatBack')
     : insLabel(mp.insert)+' · '+m.mountText+(m.spotTxt?' · '+m.spotTxt:'')+(m.plateSrc?t('sb.outline',t('src.'+m.plateSrc)):'');
   $('s-warn').textContent = buildWarn.length ? '! '+buildWarn[0] : '';
   $('st-size').textContent=m.size;
@@ -2747,22 +3222,26 @@ function wire(){
     el.addEventListener('input',upd); upd();
   });
   UI.sliders=()=>sliderLabels.forEach(f=>f());
-  $('insert').addEventListener('change',()=>{
-    const v=INS[$('insert').value];
-    if(v && v.d){
-      $('pd').value=v.d; $('pdep').value=v.t;
-      $('seat').value = v.mag ? 'socket' : 'flat';
-      if(v.mag && $('mount').value==='auto') $('mount').value='inset';
-      const mv=$('mount').value;
-      if(v.mag && mv==='pocket' && +$('thick').value < v.t+ +$('lid').value+ +$('fwall').value){
-        $('thick').value=Math.min(8,(v.t+ +$('lid').value+ +$('fwall').value+0.2)).toFixed(1);
-        $('v-thick').textContent=$('thick').value+t('u.mmSuffix');
-      }
-      if(v.mag && mv.indexOf('boss')===0)
-        $('bh').value=(v.t+ +$('lid').value+0.6).toFixed(1);
-      if(!v.mag && mv.indexOf('boss')===0) $('bh').value='0.8';
-    }
-    syncRows(); refresh();
+  // размеры вставки подставляются при смене типа и размера магнита;
+  // правка руками переводит магнит в «свои размеры»
+  const fillInsert=()=>{
+    const key = $('mtype').value==='magnet' ? $('msize').value : 'needle';
+    const v=INS[key];
+    if(v && v.d){ $('pd').value=v.d; $('pdep').value=v.t; }
+  };
+  $('mtype').addEventListener('change',()=>{
+    // «свои размеры» от прошлого раза не должны оставить в полях размеры иглы
+    if($('mtype').value==='magnet' && $('msize').value==='custom') $('msize').value='mag6';
+    fillInsert();
+  });
+  $('msize').addEventListener('change',fillInsert);
+  ['pd','pdep'].forEach(id=>$(id).addEventListener('input',()=>{
+    if($('mtype').value!=='magnet') return;
+    const v=INS[$('msize').value];
+    if(v && v.d && (+$('pd').value!==v.d || +$('pdep').value!==v.t)) $('msize').value='custom';
+  }));
+  $('loopreset').addEventListener('click',()=>{
+    $('lox').value=0; $('loy').value=0; refresh();
   });
   $('inv').addEventListener('change',()=>{
     if($('inv').checked && $('mode').value==='cut' && +$('ring').value<1.5){
@@ -2775,28 +3254,26 @@ function wire(){
     $('lx').value=c.x.toFixed(2); $('ly').value=c.y.toFixed(2);
     refresh();
   });
-  ['mode','inv','mount','insert','seat','lid','lidon','autoth','zone','bd','bh','bsp','pd','pdep','ox','oy','lx','ly','plate','solid','tech'].forEach(id=>$(id).addEventListener('input',()=>{
+  ['mode','inv','mtype','msize','mcount','nseat','gseat','lid','autoth','zone','bd','bh','bsp','pd','pdep','ox','oy','lx','ly','plate','solid','tech','loopside','loopin','loopd','loopw','lox','loy','loopf'].forEach(id=>$(id).addEventListener('input',()=>{
     syncRows(); renderRecipe(); refresh();
   }));
   function syncRows(){
-    const mv=$('mode').value, mt=$('mount').value;
+    const mv=$('mode').value, mt=$('mtype').value;
     document.querySelectorAll('[data-only]').forEach(r=>{
       r.style.display = r.dataset.only===mv ? '' : 'none';
     });
     document.querySelectorAll('[data-hide]').forEach(r=>{
       r.style.display = r.dataset.hide===mv ? 'none' : '';
     });
-    const ins=INS[$('insert').value], seat=$('seat').value;
-    document.querySelectorAll('[data-seat]').forEach(r=>{
-      r.style.display = (r.dataset.seat===seat && mt!=='none') ? '' : 'none';
-    });
-    document.querySelectorAll('[data-ins]').forEach(r=>{
-      r.style.display = (ins && ins.mag && mt!=='none' && seat==='socket') ? '' : 'none';
-    });
-    document.querySelectorAll('[data-mount]').forEach(r=>{
-      const on = r.dataset.mount==='bossmanual' ? (mt==='boss'||mt==='boss2') : (r.dataset.mount==='boss2manual' ? mt==='boss2' : mt===r.dataset.mount);
-      r.style.display = on ? '' : 'none';
-    });
+    const two=$('mcount').value==='2';
+    const seat = mt==='magnet' ? $('gseat').value : $('nseat').value;
+    const show=(sel,fn)=>document.querySelectorAll(sel).forEach(r=>{ r.style.display = fn(r) ? '' : 'none'; });
+    show('[data-mt]', r=>r.dataset.mt.split(' ').indexOf(mt)>=0
+      && (!('cnt' in r.dataset) || two)
+      && (!('gseat' in r.dataset) || $('gseat').value===r.dataset.gseat)
+      && (!('nseat' in r.dataset) || $('nseat').value===r.dataset.nseat)
+      && (!('flat' in r.dataset) || seat==='flat'));
+    show('#grp-mount details.sub [data-nseat]', ()=>two || (mt==='needle' && $('nseat').value==='pocket') || (mt==='magnet' && $('gseat').value==='lid'));
   }
   syncRows();
   let flipped=false;
