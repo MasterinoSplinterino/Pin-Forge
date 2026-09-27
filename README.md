@@ -19,8 +19,10 @@ The interface is bilingual, English and Russian, with a switch in the header.
 
 ## What it gives you
 
-- **A body that fits the logo** — a round disc, a rounded rectangle, or a plate
-  cut to the outline of the letters themselves.
+- **A body that fits the logo** — a round disc, a rounded rectangle, a plate
+  cut to the outline of the letters themselves, or no plate at all: the letters
+  are the body. The last one suits a logo whose letters are fused into one shape;
+  the generator warns when the logo falls apart into loose pieces.
 - **A socket for the hardware** — butterfly clutch pin or a magnet, recessed,
   glued onto a pad, or sunk under a printed lid with a pause in the print.
 - **A keychain hole** — instead of the socket: a hole for a split ring on the

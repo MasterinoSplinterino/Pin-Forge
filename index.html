@@ -247,8 +247,10 @@
           <option value="disc" data-i18n="shape.disc"></option>
           <option value="cut" data-i18n="shape.cut"></option>
           <option value="rect" data-i18n="shape.rect"></option>
+          <option value="bare" data-i18n="shape.bare"></option>
         </select>
       </div>
+      <div class="hint" data-only="bare" data-i18n="hint.bare"></div>
       <div class="row" data-only="disc"><label for="diam" data-i18n="f.diam"></label>
         <input type="range" id="diam" min="12" max="120" step="0.5" value="25">
         <span class="val" id="v-diam"></span></div>
@@ -279,13 +281,13 @@
       <div class="row"><label for="logo" data-i18n="f.size"></label>
         <input type="range" id="logo" min="5" max="100" step="0.5" value="17">
         <span class="val" id="v-logo"></span></div>
-      <div class="row" data-hide="cut"><label for="lx" data-i18n="f.logooff"></label>
+      <div class="row" data-hide="cut bare"><label for="lx" data-i18n="f.logooff"></label>
         <input type="number" id="lx" class="n2" value="0" step="0.1">
         <input type="number" id="ly" class="n2" value="0" step="0.1"></div>
-      <div class="row rowend" data-hide="cut">
+      <div class="row rowend" data-hide="cut bare">
         <button type="button" id="lcenter" style="padding:3px 9px;font-size:11px" data-i18n="f.logocenter"></button></div>
       <div class="row"><label for="rel" data-i18n="f.rel"></label>
-        <input type="range" id="rel" min="0.2" max="2" step="0.05" value="0.5">
+        <input type="range" id="rel" min="0.2" max="8" step="0.05" value="0.5">
         <span class="val" id="v-rel"></span></div>
       <div class="row"><label for="bev" data-i18n="f.bev"></label>
         <input type="range" id="bev" min="0" max="0.3" step="0.02" value="0.1">
@@ -293,13 +295,13 @@
       <div class="row"><label for="grow" data-i18n="f.grow"></label>
         <input type="range" id="grow" min="-0.2" max="0.4" step="0.02" value="0">
         <span class="val" id="v-grow"></span></div>
-      <div class="row"><label for="draft" data-i18n="f.draft"></label>
+      <div class="row" data-hide="bare"><label for="draft" data-i18n="f.draft"></label>
         <input type="range" id="draft" min="0" max="0.25" step="0.01" value="0.08">
         <span class="val" id="v-draft"></span></div>
-      <div class="row"><label for="inv" data-i18n="f.inv"></label>
+      <div class="row" data-hide="bare"><label for="inv" data-i18n="f.inv"></label>
         <input type="checkbox" id="inv"></div>
       <div class="hint" data-i18n-html="hint.grow"></div>
-      <div class="hint" data-hide="cut" data-i18n="hint.logooff"></div>
+      <div class="hint" data-hide="cut bare" data-i18n="hint.logooff"></div>
     </details>
 
     <details class="grp" id="grp-mount" open>
@@ -481,6 +483,10 @@ ru:{
   'shape.disc':'Круглая плашка',
   'shape.cut':'По контуру логотипа',
   'shape.rect':'Скруглённый прямоугольник',
+  'shape.bare':'Без площадки',
+  'hint.bare':'Фона нет: тело пина — это сами буквы. Толщина задаёт основу, рельеф — верхний слой со скосом по кромке; на границе слоёв можно сменить пластик. Годится для лого, где все буквы срослись в одну фигуру: отдельные куски ничто не держит вместе.',
+  'w.bareParts':n=>'Логотип распадается на отдельные куски ('+n+' шт.): без площадки они напечатаются россыпью. Слей буквы в SVG или выбери плашку по контуру.',
+  'w.loopBare':'Свободного места под отверстие в самих буквах нет, поэтому кольцо вынесено наружу ушком.',
   'f.diam':'Диаметр',
   'f.marg':'Поля вокруг лого',
   'f.rad':'Радиус скругления',
@@ -554,7 +560,7 @@ ru:{
   'w.loopFlatDisc':'С отверстием внутри круглая плашка строится без купола.',
   'w.loopCut':'Плашка по контуру облегает буквы, свободного места под отверстие в ней нет, поэтому кольцо вынесено наружу ушком. Чтобы отверстие было внутри, возьми скруглённый прямоугольник: он сам удлинится под кольцо.',
   'w.loopThin':v=>'Ободок ушка '+v+' мм: кольцо перетрёт его или разогнёт. Ставь от 2 мм.',
-  'w.loopBlock':'У края буква или её контрформа, хвост ушка упёрся в неё и заходит в плашку неглубоко. Если ушко держится слабо — увеличь кант или сдвинь логотип.',
+  'w.loopBlock':b=>'У края буква или её контрформа, хвост ушка упёрся в неё и заходит в '+(b?'букву':'плашку')+' неглубоко. Если ушко держится слабо — '+(b?'включи скругление перехода.':'увеличь кант или сдвинь логотип.'),
   'f.bd':'Ø площадки, мин. (0 — по гнезду)',
   'f.bsp':'Разнос центров',
   'f.pd':'Ø гнезда под вставку',
@@ -666,13 +672,13 @@ ru:{
   'w.padButt':', вставка клеится встык',
   'w.padSunk':(c,o)=>', утоплено в тело '+c+' мм, наружу '+o+' мм',
   'w.padNarrow':pd=>'. Спинка узкая: диск Ø'+pd+' мм шире её, площадка выходит за контур',
-  'w.padNoFit':(pd,best)=>'. Вставка Ø'+pd+' мм не помещается в контур — в лучшей точке влезает Ø'+best+' мм. Увеличь размер лого или кант, либо возьми вставку меньше',
+  'w.padNoFit':(pd,best,b)=>'. Вставка Ø'+pd+' мм не помещается в контур — в лучшей точке влезает Ø'+best+' мм. '+(b?'Без площадки гнездо садится прямо в штрих буквы: увеличь лого или возьми вставку меньше':'Увеличь размер лого или кант, либо возьми вставку меньше'),
   'w.padTail':'. Край площадки нависает: при печати лицом вниз включи поддержки.',
-  'w.noFit':pd=>'Вставка Ø'+pd+' мм шире контура — гнездо не сделать. Увеличь лого или кант, либо возьми вставку меньше.',
+  'w.noFit':(pd,b)=>'Вставка Ø'+pd+' мм шире контура — гнездо не сделать. '+(b?'Без площадки гнездо садится прямо в штрих буквы: увеличь лого, возьми вставку меньше или приклей её встык на плоскую спинку.':'Увеличь лого или кант, либо возьми вставку меньше.'),
   'w.proud':(o,need)=>'Вставка выступает на '+o+' мм за спинку. Поддержки не нужны — печатается как обычное глухое отверстие. Чтобы утопить целиком, толщина должна быть '+need+' мм.',
   'w.fwall':v=>'Стенка под лицом '+v+' мм — магнит может проступить бугром на лицевой стороне и просвечивать при тонком покрытии.',
   'w.wall':v=>'Стенка площадки '+v+' мм — это 2 линии при сопле 0.2. Меньше не печатай.',
-  'w.offCenter':v=>'Ближе к центру вставка не помещается, гнездо ушло на '+v+' мм вбок. Пин будет заваливаться — увеличь размер лого или кант, либо поставь два крепления.',
+  'w.offCenter':(v,b)=>'Ближе к центру вставка не помещается, гнездо ушло на '+v+' мм вбок. Пин будет заваливаться — увеличь размер лого'+(b?'':' или кант')+', либо поставь два крепления.',
 
   'tip.strokeThin':(bad,size,add)=>'Штрих тоньше '+bad+' мм — не пропечатается. Увеличь лого до '+size+' мм или добавь утолщение +'+add+' мм.',
   'tip.strokeEdge':add=>'Штрих на грани: добавь утолщение +'+add+' мм.',
@@ -745,6 +751,10 @@ en:{
   'shape.disc':'Round disc',
   'shape.cut':'Follow the logo outline',
   'shape.rect':'Rounded rectangle',
+  'shape.bare':'No plate',
+  'hint.bare':'There is no background: the letters themselves are the pin body. Thickness sets the base, relief is the top layer with a chamfered edge; you can swap filament at the boundary. Suits a logo whose letters are fused into one shape: nothing holds separate pieces together.',
+  'w.bareParts':n=>'The logo falls apart into '+n+' separate pieces: without a plate they print as loose bits. Merge the letters in the SVG or pick the outline plate.',
+  'w.loopBare':'The letters leave no free room for the hole, so the ring moved outside as a tab.',
   'f.diam':'Diameter',
   'f.marg':'Margin around the logo',
   'f.rad':'Corner radius',
@@ -818,7 +828,7 @@ en:{
   'w.loopFlatDisc':'With the hole inside, the round plate is built without the dome.',
   'w.loopCut':'An outline plate hugs the letters and has no free room for the hole, so the ring moved outside as a tab. To get the hole inside, pick the rounded rectangle: it grows longer for the ring on its own.',
   'w.loopThin':v=>'The loop rim is '+v+' mm, the ring will wear through it or bend it open. Use 2 mm or more.',
-  'w.loopBlock':'A letter or its counter sits close to the edge, so the loop tail stops short of it and only just enters the plate. If the loop feels weak, widen the border or move the logo.',
+  'w.loopBlock':b=>'A letter or its counter sits close to the edge, so the loop tail stops short of it and only just enters the '+(b?'letter':'plate')+'. If the loop feels weak, '+(b?'turn on the rounded joint.':'widen the border or move the logo.'),
   'f.bd':'Pad Ø, min. (0 — match the socket)',
   'f.bsp':'Centre spacing',
   'f.pd':'Insert socket Ø',
@@ -930,13 +940,13 @@ en:{
   'w.padButt':', the insert is glued flush',
   'w.padSunk':(c,o)=>', recessed '+c+' mm into the body, '+o+' mm outside',
   'w.padNarrow':pd=>'. The back is narrow: the Ø'+pd+' mm disc is wider than it, so the pad runs past the outline',
-  'w.padNoFit':(pd,best)=>'. The Ø'+pd+' mm insert does not fit the outline — the best spot takes Ø'+best+' mm. Enlarge the logo or the border, or pick a smaller insert',
+  'w.padNoFit':(pd,best,b)=>'. The Ø'+pd+' mm insert does not fit the outline — the best spot takes Ø'+best+' mm. '+(b?'Without a plate the socket sits right in a letter stroke: enlarge the logo or pick a smaller insert':'Enlarge the logo or the border, or pick a smaller insert'),
   'w.padTail':'. The pad edge overhangs: enable supports when printing face down.',
-  'w.noFit':pd=>'The Ø'+pd+' mm insert is wider than the outline, so no socket can be cut. Enlarge the logo or the border, or pick a smaller insert.',
+  'w.noFit':(pd,b)=>'The Ø'+pd+' mm insert is wider than the outline, so no socket can be cut. '+(b?'Without a plate the socket sits right in a letter stroke: enlarge the logo, pick a smaller insert, or glue it flush onto a flat back.':'Enlarge the logo or the border, or pick a smaller insert.'),
   'w.proud':(o,need)=>'The insert sticks out '+o+' mm past the back. No supports are needed, it prints as an ordinary blind hole. To sink it completely the thickness must be '+need+' mm.',
   'w.fwall':v=>'The wall under the face is '+v+' mm, so the magnet may telegraph as a bump on the front and show through a thin finish.',
   'w.wall':v=>'The pad wall is '+v+' mm, which is 2 lines on a 0.2 nozzle. Do not go thinner.',
-  'w.offCenter':v=>'The insert does not fit nearer the centre, so the socket moved '+v+' mm sideways. The pin will tilt — enlarge the logo or the border, or use two mounts.',
+  'w.offCenter':(v,b)=>'The insert does not fit nearer the centre, so the socket moved '+v+' mm sideways. The pin will tilt — enlarge the logo'+(b?'':' or the border')+', or use two mounts.',
 
   'tip.strokeThin':(bad,size,add)=>'The stroke is thinner than '+bad+' mm and will not print. Enlarge the logo to '+size+' mm or add +'+add+' mm of thickening.',
   'tip.strokeEdge':add=>'The stroke is borderline: add +'+add+' mm of thickening.',
@@ -2212,11 +2222,14 @@ function buildPin(p){
   const scaled=logoRings.map(r=>r.map(q=>({x:(q.x-cx)*k,y:(q.y-cy)*k})));
   // Сдвиг надписи внутри плашки. В режиме «по контуру» плашка сама следует
   // за буквами, так что двигать там нечего.
-  const lx = p.mode==='cut' ? 0 : (p.lx||0);
-  const ly = p.mode==='cut' ? 0 : (p.ly||0);
+  // Без площадки тело и есть буквы: сдвигать их не относительно чего.
+  const bare = p.mode==='bare';
+  const lx = (p.mode==='cut'||bare) ? 0 : (p.lx||0);
+  const ly = (p.mode==='cut'||bare) ? 0 : (p.ly||0);
   const scaledLogo = (lx||ly) ? scaled.map(r=>r.map(q=>({x:q.x+lx,y:q.y+ly}))) : scaled;
 
-  const engrave=p.inv;
+  // врезать буквы некуда: фона, в который их врезать, нет
+  const engrave=p.inv && !bare;
   const relief=engrave?Math.min(p.rel,p.h*0.6):p.rel;
   // тон плашки заметно темнее букв, иначе на превью рельеф сливается
   const mat=new THREE.MeshPhongMaterial({color:0xb4b9c2,specular:0x8f95a0,shininess:60});
@@ -2241,7 +2254,7 @@ function buildPin(p){
   // В гравировку нельзя резать по пустоте: при врезанных буквах плашка
   // всегда сплошная, иначе контрформы становятся сквозными дырами и
   // верхняя плита вычитает сама себя.
-  const solidPlate = p.solid || engrave;
+  const solidPlate = !bare && (p.solid || engrave);
   const plateKey = p.mode==='disc' ? null
     : [p.logo,p.ring,p.grow,solidPlate,logoName].join('|');
   const rw=w*k+2*p.marg, rh=hh*k+2*p.marg;
@@ -2250,6 +2263,8 @@ function buildPin(p){
   const loopWant = !!(p.loop && p.loopIn);
   let parts = p.mode==='disc'
     ? {outers:[circlePoly(p.D/2)], inners:[]}
+    : bare
+    ? ringsToParts(scaledLogo,p.grow/2)
     : p.mode==='rect'
     ? {outers:[loopWant ? rectForLoop(rw,rh,p.rad,scaledLogo,p.loop,p.loopD,p.loopW,loopGap)
                       : roundRectPoly(rw,rh,p.rad)], inners:[]}
@@ -2263,9 +2278,11 @@ function buildPin(p){
     const rimNow=loopIn.probe(loopIn.cx,loopIn.cy).edge-loopIn.hole;
     if(rimNow<p.loopW-0.05 && rimNow<2) warn(t('w.loopEdge',rimNow.toFixed(1)));
   }
-  if(loopWant && !loopIn && p.mode!=='cut') warn(t('w.loopNoRoom'));
+  if(bare && parts.outers.length>1) warn(t('w.bareParts',parts.outers.length));
+  if(loopWant && !loopIn && p.mode!=='cut' && !bare) warn(t('w.loopNoRoom'));
   if(loopIn && p.mode==='disc' && !engrave && p.dome>0.01) warn(t('w.loopFlatDisc'));
   if(loopWant && !loopIn && p.mode==='cut') warn(t('w.loopCut'));
+  if(loopWant && !loopIn && bare) warn(t('w.loopBare'));
   // Ушко снаружи. Со скруглением оно вливается в контур плашки и дальше
   // строится вместе с ней одним телом; без скругления — отдельное тело.
   // Врезку печатают лицом вниз, там ушко должно доставать до лица, поэтому
@@ -2280,7 +2297,7 @@ function buildPin(p){
     lugL=loopGeom(parts.outers,block,p.loop,p.loopD,p.loopW,ly0,(p.loop==='right'?1:-1)*p.lox);
     if(lugL){
       if(p.loopW<2) warn(t('w.loopThin',p.loopW.toFixed(1)));
-      if(lugL.blocked) warn(t('w.loopBlock'));
+      if(lugL.blocked && !(bare && p.loopF>0.05)) warn(t('w.loopBlock',bare));
     }
     if(lugL && p.loopF>0.05){
       let u=null;
@@ -2385,6 +2402,11 @@ function buildPin(p){
     } else {
       group.add(new THREE.Mesh(EX(plate(),bodyH),mat));
     }
+    /* Скруглённое ушко перестраивает контур через растр, и без площадки
+       тело выходит у́же букв на долю пикселя: верхний слой свисал бы за
+       край. Под буквы кладём точное тело, растровое даёт только ушко. */
+    if(bare && merged)
+      group.add(new THREE.Mesh(EX(partsToShapes(ringsToParts(scaledLogo,p.grow/2)),bodyH),mat));
   }
 
   if(padH>0.05 || padLid>0.005){
@@ -2401,7 +2423,7 @@ function buildPin(p){
       ghosts.push([sp.x,sp.y,flat?(-padH-p.pdep):-padH]);
     });
     warn(t('w.padHead',flat)+padD.toFixed(1)+t('w.padBack')+(flat?t('w.padButt'):'')+(cav>0.05?t('w.padSunk',cav.toFixed(1),(padH+padLid).toFixed(1)):'')+
-      (allFit?'':(flat?t('w.padNarrow',p.pd):t('w.padNoFit',p.pd,(spots[0]?(spots[0].r*2).toFixed(1):'0'))))+
+      (allFit?'':(flat?t('w.padNarrow',p.pd):t('w.padNoFit',p.pd,(spots[0]?(spots[0].r*2).toFixed(1):'0'),bare)))+
       t('w.padTail'));
   } else if(cav>0.05 && !internalVoid){
     spots.forEach(sp=>ghosts.push([sp.x,sp.y,0]));
@@ -2411,7 +2433,7 @@ function buildPin(p){
     spots.forEach(sp=>ghosts.push([sp.x,sp.y,cav-p.pdep]));
   }
   if(noPad && kind!=='none'){
-    if(!allFit) warn(t('w.noFit',p.pd));
+    if(!allFit) warn(t('w.noFit',p.pd,bare));
     else if(p.pdep-cav>0.05) warn(t('w.proud',(p.pdep-cav).toFixed(1),(p.pdep+p.fwall).toFixed(1)));
   }
   if(kind!=='none' && minTop<0.5)
@@ -2419,7 +2441,7 @@ function buildPin(p){
   if(padH>0.05 && p.wall<0.5)
     warn(t('w.wall',p.wall.toFixed(1)));
   if(off0>1.5 && kind!=='none' && kind!=='boss2')
-    warn(t('w.offCenter',off0.toFixed(1)));
+    warn(t('w.offCenter',off0.toFixed(1),bare));
 
   let loopBB=null;
   if(lugL && !merged){
@@ -2451,9 +2473,12 @@ function buildPin(p){
     count=res.count;
     if(!res.shapes.length) return null;
     const bev=Math.min(p.bev,relief*0.4);
-    const lg=new THREE.ExtrudeGeometry(res.shapes,{
+    /* Скос выдавливания расширяет букву посередине на bev. На плашке это
+       незаметно, а без площадки полка вылезла бы за край тела. Там скос
+       сдвигаем внутрь: посередине ровно контур тела, сверху — ужатый. */
+    const lg=new THREE.ExtrudeGeometry(bare?normShapes(res.shapes):res.shapes,{
       depth:relief-(bev>0?bev:0), bevelEnabled:bev>0,
-      bevelThickness:bev, bevelSize:bev, bevelOffset:0, bevelSegments:2,
+      bevelThickness:bev, bevelSize:bev, bevelOffset:bare?-bev:0, bevelSegments:2,
       steps:1, curveSegments:1});
     lg.translate(0,0,bodyH-0.001+(dome>0?dome*0.35:0));
     group.add(new THREE.Mesh(lg,logoMat));
@@ -2464,7 +2489,7 @@ function buildPin(p){
        тело и не видна, верхняя сходится от контура+уклон к контуру буквы.
        Контур чуть ужат, чтобы верх скоса лёг внутрь буквы, а не на её стенку. */
     const hs=Math.min(relief*0.6, relief-bev-0.03, bodyH-0.05);
-    if(p.draft>0.005 && hs>0.05){
+    if(p.draft>0.005 && hs>0.05 && !bare){
       const sk=normShapes(ringsToShapes(scaledLogo,p.grow/2-0.01).shapes);
       const sg=new THREE.ExtrudeGeometry(sk,{depth:0.02,bevelEnabled:true,
         bevelThickness:hs,bevelSize:p.draft,bevelOffset:0,bevelSegments:1,
@@ -2782,7 +2807,11 @@ function makeZip(files){
   const enc=new TextEncoder();
   const chunks=[],central=[];
   let offset=0;
-  const dosTime=0x8000, dosDate=0x5800;
+  /* Дата в DOS-формате. Раньше стояла константа 0x5800: месяц и день в ней
+     нулевые, и 7-Zip на такой архив пишет «Ошибка в заголовках». */
+  const now=new Date();
+  const dosTime=(now.getHours()<<11)|(now.getMinutes()<<5)|(now.getSeconds()>>1);
+  const dosDate=((Math.max(1980,now.getFullYear())-1980)<<9)|((now.getMonth()+1)<<5)|now.getDate();
   const canZ = (typeof pako!=='undefined' && pako.deflateRaw);
   for(const f of files){
     const name=enc.encode(f.name), raw=f.data;
@@ -3175,7 +3204,7 @@ function markLoaded(name){
 function loadSVGText(text,name){
   try{
     logoRings=parseSVGtoRings(text);
-    if(name) logoName=name.replace(/\.svg$/i,'').replace(/[^\w\-]+/g,'-').slice(0,40)||'pin';
+    if(name) logoName=name.replace(/\.svg$/i,'').replace(/[^\p{L}\p{N}_\-]+/gu,'-').slice(0,40)||'pin';
     markLoaded(name);
     try{ analysis=analyzeLogo(logoRings); }catch(e){ analysis=null; }
     const nr=logoRings.length; say(()=>t('msg.parsed',nr),true);
@@ -3260,10 +3289,10 @@ function wire(){
   function syncRows(){
     const mv=$('mode').value, mt=$('mtype').value;
     document.querySelectorAll('[data-only]').forEach(r=>{
-      r.style.display = r.dataset.only===mv ? '' : 'none';
+      r.style.display = r.dataset.only.split(' ').indexOf(mv)>=0 ? '' : 'none';
     });
     document.querySelectorAll('[data-hide]').forEach(r=>{
-      r.style.display = r.dataset.hide===mv ? 'none' : '';
+      r.style.display = r.dataset.hide.split(' ').indexOf(mv)>=0 ? 'none' : '';
     });
     const two=$('mcount').value==='2';
     const seat = mt==='magnet' ? $('gseat').value : $('nseat').value;
