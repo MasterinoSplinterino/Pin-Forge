@@ -1994,6 +1994,88 @@ function filletUnion(outers,inners,add,r){
   const toMM=p=>({x:p.x/ppm+(bb.minx-pad), y:(bb.maxy+pad)-p.y/ppm});
   return nestRings(traceAlpha(av,W,H,ppm,toMM));
 }
+/* Контур букв, честно ужатый на d: растр, заливка, затем обводка шириной 2d
+   со скруглёнными стыками стирает кромку со всех сторон, включая контрформы.
+   Смещение по нормали (offsetRing) на ужатии даёт петли у острых углов, и
+   крышка выдавливания рвётся. Нужен скосу рельефа без площадки. */
+let INSET_CACHE={key:null,val:null};
+/* Там, где ужатие съедает штрих почти до нуля, контур касается сам себя
+   (или соседнего кольца) в одной точке. Стенка выдавливания на такой точке
+   получает ребро с четырьмя гранями. Вторую из совпавших точек выбрасываем:
+   контур проходит рядом, но уже не через ту же вершину. */
+function dropPinches(pp,eps){
+  const cell=new Map(), e2=eps*eps;
+  const ck=(i,j)=>i+','+j;
+  const clean=r=>r.filter(q=>{
+    const i=Math.floor(q.x/eps), j=Math.floor(q.y/eps);
+    for(let di=-1;di<=1;di++) for(let dj=-1;dj<=1;dj++){
+      const l=cell.get(ck(i+di,j+dj));
+      if(l && l.some(o=>(o.x-q.x)*(o.x-q.x)+(o.y-q.y)*(o.y-q.y)<e2)) return false;
+    }
+    const k=ck(i,j); if(!cell.has(k)) cell.set(k,[]); cell.get(k).push(q);
+    return true;
+  });
+  const outers=pp.outers.map(clean).filter(r=>r.length>=3);
+  const inners=pp.inners.map(clean).filter(r=>r.length>=3);
+  return {outers,inners};
+}
+function insetParts(parts,d,c,cacheKey){
+  if(INSET_CACHE.key===cacheKey) return INSET_CACHE.val;
+  let val=null;
+  try{
+    const bb=bboxOf(parts.outers), pad=1;
+    const wmm=(bb.maxx-bb.minx)+2*pad, hmm=(bb.maxy-bb.miny)+2*pad;
+    const ppm=Math.max(8,Math.min(48, 1600/Math.max(wmm,hmm)));
+    const W=Math.ceil(wmm*ppm), H=Math.ceil(hmm*ppm);
+    if(W*H<=4200000){
+      const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+      const ctx=cv.getContext('2d',{willReadFrequently:true});
+      const X=x=>(x-(bb.minx-pad))*ppm, Y=y=>((bb.maxy+pad)-y)*ppm;
+      const ring=r=>{ ctx.beginPath(); ctx.moveTo(X(r[0].x),Y(r[0].y));
+        for(let i=1;i<r.length;i++) ctx.lineTo(X(r[i].x),Y(r[i].y)); ctx.closePath(); };
+      ctx.fillStyle='#000'; ctx.strokeStyle='#000';
+      ctx.lineJoin='round'; ctx.lineCap='round'; ctx.lineWidth=2*d*ppm;
+      // каждое кольцо отдельно: при общем пути обход разной ориентации гасит заливку
+      parts.outers.forEach(r=>{ ring(r); ctx.fill(); });
+      ctx.globalCompositeOperation='destination-out';
+      parts.inners.forEach(r=>{ ring(r); ctx.fill(); });
+      parts.outers.concat(parts.inners).forEach(r=>{ ring(r); ctx.stroke(); });
+      ctx.globalCompositeOperation='source-over';
+      const px=ctx.getImageData(0,0,W,H).data, N=W*H;
+      /* Скос раздувает контур наружу на bev, и любая вогнутость радиусом
+         меньше bev (хотя бы шум растра) складывается в «ласточкин хвост»:
+         стенка проходит сама через себя. Поэтому сначала закрытие на c —
+         раздуть и ужать обратно, вогнутости не мельче c. Щелей оно не
+         заливает: ужатие на d≥c уже раздвинуло их на 2d.
+         Затем открытие на k: ужать и раздуть. Острые выпуклые кончики
+         ужатие сохраняет острыми, скос раздувает их по биссектрисе, и
+         соседние вершины стенки совпадают. После открытия у кончиков радиус k. */
+      const cp=Math.min(d,c)*ppm, kp=0.1*ppm, g=new Float64Array(N);
+      for(let i=0;i<N;i++) g[i]=px[i*4+3]>=128?0:EDT_BIG;
+      const dOut=edt2(g,W,H);                          // до ближайшего своего
+      for(let i=0;i<N;i++) g[i]=dOut[i]<=cp*cp?EDT_BIG:0;
+      const dCl=edt2(g,W,H);                           // до края раздутого
+      for(let i=0;i<N;i++) g[i]=dCl[i]>cp*cp?EDT_BIG:0;
+      const dIn=edt2(g,W,H);                           // до ближайшего пустого
+      for(let i=0;i<N;i++) g[i]=dIn[i]>kp*kp?0:EDT_BIG;
+      const dCore=edt2(g,W,H);                         // до ужатого на k
+      const op=new Uint8ClampedArray(N);
+      for(let i=0;i<N;i++) op[i]=Math.min(1,Math.max(0,kp-Math.sqrt(dCore[i])+0.5))*255;
+      const av=(i,j)=> (i<0||j<0||i>=W||j>=H) ? 0 : op[j*W+i];
+      const toMM=p=>({x:p.x/ppm+(bb.minx-pad), y:(bb.maxy+pad)-p.y/ppm});
+      const raw=traceAlpha(av,W,H,ppm,toMM);
+      // шаг точек не мельче 0.04: скос сводит точки вогнутых дуг в разы
+      // теснее, и при сварке вершин в экспорте (0.001) они слипались бы
+      const thin=r=>{ const o=[]; r.forEach(q=>{ const l=o[o.length-1];
+        if(!l || Math.hypot(q.x-l.x,q.y-l.y)>=0.04) o.push(q); });
+        while(o.length>3 && Math.hypot(o[0].x-o[o.length-1].x,o[0].y-o[o.length-1].y)<0.04) o.pop();
+        return o; };
+      if(raw.length) val=dropPinches(nestRings(raw.map(thin).filter(r=>r.length>=8)),0.3/ppm);
+    }
+  }catch(e){ val=null; }
+  INSET_CACHE={key:cacheKey,val};
+  return val;
+}
 function plateParts(rings,off,solid,cacheKey){
   if(PLATE_CACHE.key===cacheKey) return PLATE_CACHE.val;
   let raw=null;
@@ -2474,11 +2556,25 @@ function buildPin(p){
     if(!res.shapes.length) return null;
     const bev=Math.min(p.bev,relief*0.4);
     /* Скос выдавливания расширяет букву посередине на bev. На плашке это
-       незаметно, а без площадки полка вылезла бы за край тела. Там скос
-       сдвигаем внутрь: посередине ровно контур тела, сверху — ужатый. */
-    const lg=new THREE.ExtrudeGeometry(bare?normShapes(res.shapes):res.shapes,{
-      depth:relief-(bev>0?bev:0), bevelEnabled:bev>0,
-      bevelThickness:bev, bevelSize:bev, bevelOffset:bare?-bev:0, bevelSegments:2,
+       незаметно, а без площадки полка вылезла бы за край тела. Там берём
+       контур, заранее ужатый на bev: скос раздувает его обратно до контура
+       тела. Сдвигать внутрь сам скос (bevelOffset<0) нельзя: крышку three.js
+       триангулирует по исходному контуру и потом сдвигает вершины, длинные
+       узкие треугольники выворачиваются, и на лице пина видны тёмные щели.
+       Ужимаем с запасом: растр гуляет на доли пикселя, пусть лучше
+       останется невидимая ступенька внутрь, чем свес наружу. Запас растёт
+       со скосом: вогнутая дуга ужатого контура имеет радиус bev+запас, и
+       скос сжимает её до радиуса запаса — при малом запасе точки слипаются. */
+    let relShapes=res.shapes, bevOn=bev>0.005;
+    if(bare && bevOn){
+      const ins=insetParts(ringsToParts(scaledLogo,p.grow/2),bev+Math.max(0.03,bev*0.25),bev+0.03,
+        [logoName,p.logo,p.grow,bev].join('|'));
+      if(ins && ins.outers.length) relShapes=normShapes(partsToShapes(ins));
+      else bevOn=false;   // растр не вышел — без скоса, но и без свеса
+    }
+    const lg=new THREE.ExtrudeGeometry(relShapes,{
+      depth:relief-(bevOn?bev:0), bevelEnabled:bevOn,
+      bevelThickness:bev, bevelSize:bev, bevelOffset:0, bevelSegments:2,
       steps:1, curveSegments:1});
     lg.translate(0,0,bodyH-0.001+(dome>0?dome*0.35:0));
     group.add(new THREE.Mesh(lg,logoMat));
